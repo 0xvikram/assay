@@ -18,14 +18,20 @@ Nanopayments), exposed as REST + MCP. See `docs/PLAN.md` §0 and §2.
 - **Confidence is earned only from payment-backed, independent reviews.** Do not soften
   the verdict rules to make demos look nicer. Thresholds live only in `src/engine/score/verdict.ts`.
 - **x402 clients sign only; the facilitator submits.** Never call sign-and-execute for payments.
+- **Gate payments per route handler, never in `middleware.ts`.** Next middleware runs on Edge; the
+  Hedera signer needs Node. Every paid handler declares `runtime = "nodejs"` and `maxDuration = 60`.
+- **State lives on HCS, not in a database or a module-level `Map`.** The deploy is serverless: receipts,
+  mandate changes and approvals are messages on the receipt topic, read back via the mirror node.
+- **No Ledger.** That track is cut (no device). Do not add a device gate, real or stubbed.
 - **Adding a data source is a registry row** (`registry/*.json`), never a code path.
 - Never commit `.env`. Every new secret → `.env.example` with an empty value and a comment.
 - Keep the surface honest: if a sponsor feature isn't live, say so in README rather than stub it.
 
 ## Stack
 Node 24 · TypeScript strict (`verbatimModuleSyntax`, `noUncheckedIndexedAccess`) · ESM ·
-`tsx` for running · Express 4 for HTTP (matches `@x402/express`) · `node:test` for tests ·
-Next.js (App Router) in `web/` · no ORM, no database unless a phase says so.
+`tsx` for the CLI · **Next.js 15 App Router at the repo root is the only server** — UI, paid API and
+MCP on one origin, deployed to **Vercel Hobby** · `@x402/next` + `@x402/mcp` for gating ·
+`node:test` for tests · no ORM, no database.
 
 ## Commands
 - `npm run assay -- base:25975` — CLI verdict (add `--json`)
@@ -34,12 +40,12 @@ Next.js (App Router) in `web/` · no ORM, no database unless a phase says so.
 - Others are added per phase and documented in README the same commit.
 
 ## Conventions
-- Small modules, pure functions in `src/engine/`, side effects only in `src/api/`, `src/agent/`, `src/treasury/`.
+- Small modules. `src/engine/` and `src/lending/` are pure and framework-free — they must never import from `next`. Side effects live in `app/api/`, `src/agent/`, `src/treasury/`, `src/hcs.ts`.
 - Named finding codes are `SCREAMING_SNAKE`; verdicts are exactly `VERIFIED | UNPROVEN | WASH_REPUTATION_DETECTED`.
 - Errors name the chain and the cause; no swallowed promises.
 - Match existing comment density; explain *why* a rule exists, not what the code does.
 - One commit per coherent step, message in the imperative, body says what changed and why.
-- At the end of each day tag `day-N`.
+- At the end of each day tag `day-N`. Deadline is Sep 16; the schedule in `docs/PLAN.md` §3 was recalibrated on Sep 8 and is the live one.
 
 ## When blocked
 Say what's blocked, what was verified, and the smallest next step. Do not invent an

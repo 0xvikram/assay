@@ -30,20 +30,20 @@ chain registry, CLI. Verified on mainnet: the #1 agent on Base by review count
 
 ## 1. Verified facts the plan depends on
 
-Everything here was checked on Sept 6. If any of it drifts, fix the plan, not the code.
+Everything here was checked Sept 6 and re-verified Sept 8. If any of it drifts, fix the plan, not the code.
 
 ### Packages (npm, current versions)
 | Package | Version | Used for |
 |---|---|---|
-| `@x402/express` `@x402/core` `@x402/hedera` `@x402/fetch` | 2.25.0 | x402 server + client, Hedera scheme |
+| `@x402/next` `@x402/core` `@x402/hedera` `@x402/fetch` | 2.25.0 | x402 route gate + client, Hedera scheme |
+| `@x402/mcp` | 2.25.0 | **paid MCP tools** — `createPaymentWrapper`, `x402ResourceServer` |
+| `next` `react` | 15.x / 19.x | the single deployable (UI + API + MCP on one origin) |
 | `@hiero-ledger/sdk` | latest | Hedera signing, HCS receipts |
 | `@modelcontextprotocol/sdk` | 1.30.0 | MCP server (stdio + Streamable HTTP) |
 | `@circle-fin/x402-batching` | 3.4.0 | Arc Nanopayments seller + buyer |
 | `@worldcoin/idkit` | 4.2.3 | Selfie Check widget |
 | `@privy-io/node` | 0.34.0 | Server wallets, policies, key quorum |
 | `@bazantic/cli` | 0.8.0 | Gateway + recipe deployment |
-| `@ledgerhq/wallet-cli` | 2.1.0 | Device confirmation (**physical device mandatory**) |
-| `express` | ^4.21 | HTTP server (matches the x402 middleware) |
 
 ### Hedera
 - Facilitator (hosted testnet, no API key): `https://api.testnet.blocky402.com` — endpoints `/supported`, `/verify`, `/settle`.
@@ -53,7 +53,7 @@ Everything here was checked on Sept 6. If any of it drifts, fix the plan, not th
 - Accounts: create **two ECDSA** testnet accounts at portal.hedera.com — *agent payer* and *service receiver*.
 - Server wiring (verified from the x402 repo):
   ```ts
-  import { paymentMiddleware, x402ResourceServer } from "@x402/express";
+  import { paymentMiddleware, x402ResourceServer } from "@x402/next";  // per-route, NOT middleware.ts
   import { HTTPFacilitatorClient } from "@x402/core/server";
   import { ExactHederaScheme } from "@x402/hedera/exact/server";
   const facilitator = new HTTPFacilitatorClient({ url: "https://api.testnet.blocky402.com" });
@@ -92,19 +92,46 @@ Everything here was checked on Sept 6. If any of it drifts, fix the plan, not th
 - Requirements on every Arc track: **working frontend AND backend AND an architecture diagram**, video + presentation. Launch track: deployed or deployment-ready on Arc mainnet **by Sept 30**.
 
 ### World
-- Sandbox form submitted (Sept 6). Sandbox app arrives via **TestFlight (iOS) or Play private track (Android)** — you need a phone.
-- **Selfie Check is separately feature-flagged.** Email `developers@toolsforhumanity.com` to request it for your app_id. Do this today.
+- **Android is the right platform and the docs say so.** Sandbox builds ship through a **private Google Play testing track**: Developer Portal → **World ID Sandbox** in the sidebar → enter the Google account email you use with the Play Store → wait for access to be granted *before* opening the testing link. The browser and the Play Store must be signed into that same account or Play reports the build unavailable.
+- Docs, verbatim on the semi-cold journey: *"reliably works on Android today"* — iOS has a known gap where tapping Sign in instead of Sign up strands the invite code. Being on Android removes a known risk.
+- The **mini app itself needs no store install**: register the app, then test by scanning `https://worldcoin.org/mini-app?app_id=app_…` (QR generator on the *Testing your mini app* docs page). Public HTTPS URL required — that is the Vercel deploy.
+- **Selfie Check is separately feature-flagged.** Docs: *"must be enabled for your app before you can test it… request access through your World point of contact."* Email `developers@toolsforhumanity.com` with your `app_id`. Sandbox-access problems go to `sandbox.access@toolsforhumanity.org`.
+- Sandbox covers the full RP journey (handoff → consent → capture → enrollment → match → proof). Out of scope: load testing, production sign-off.
 - IDKit: `IDKitInviteCodeRequestWidget` with the `selfieCheckLegacy` preset; set `environment: "sandbox"`.
 - Backend verify: `POST https://developer.world.org/api/v4/verify/{rp_id}` — no API key.
 - Judged: working app **and** a feedback document covering docs, portal navigation, sandbox testing, issues found.
+
+### x402 over MCP (verified Sept 8 — this changes the architecture)
+`@x402/mcp` exists and is first-party. It gates **individual MCP tools** behind payment, so the MCP
+surface and the paid API are the *same* artifact rather than two builds:
+```ts
+import { createPaymentWrapper, x402ResourceServer } from "@x402/mcp";
+import { HTTPFacilitatorClient } from "@x402/core/server";
+import { ExactHederaScheme } from "@x402/hedera/exact/server";
+
+const resourceServer = new x402ResourceServer(
+  new HTTPFacilitatorClient({ url: "https://api.testnet.blocky402.com" }));
+resourceServer.register("hedera:testnet", new ExactHederaScheme());
+await resourceServer.initialize();
+const accepts = await resourceServer.buildPaymentRequirements({
+  scheme: "exact", network: "hedera:testnet", payTo: SERVICE_ACCOUNT, price: "$0.05" });
+const paid = createPaymentWrapper(resourceServer, { accepts });
+
+mcpServer.tool("assay_agent", "Verify an ERC-8004 agent. Costs $0.05.",
+  { ref: z.string() }, paid(async (a) => ({ content: [{ type: "text", text: await report(a.ref) }] })));
+mcpServer.tool("assay_thresholds", "Free: current detector thresholds.", {}, free);
+```
+Free tools stay unwrapped. Paid + free on one server is the honest shape: discovery is free, evidence costs.
+Framework adapters live at `x402-foundation/x402 → typescript/packages/http/{next,express,fastify,hono,fetch,axios,paywall}`.
 
 ### Privy
 - `@privy-io/node`: create a wallet, attach a **policy** (allowlist + spending limit — docs: `controls/policies/example-policies/ethereum`), a **key quorum** for escalation (`controls/key-quorum/create`), optionally **intents** (`transaction-management/intents/create/execute-transfer`).
 - B2B track needs: one wallet + one B2B workflow (approval / treasury op) + one control (policy / quorum / intent). Flow track needs one live transfer/swap through a Privy wallet. Mocked features don't count.
 
-### Ledger
-- `wallet-cli send … ` shows "Review on device" — **a physical Ledger over USB is mandatory; no simulator documented; no Node SDK — CLI only.**
-- **Decision gate:** if you don't own a Ledger device, cut this track now and reclaim the day.
+### Ledger — **CUT (decided Sept 8)**
+No device. `wallet-cli` requires a physical Ledger over USB; no simulator, no Node SDK. There is no
+honest way to demo it, and a stubbed device gate is worse than no gate. $3,500 of surface forfeited;
+the half-day it would have cost is spent on the Hedera and Graph demos instead. Do not revisit.
 
 ### Bazantic
 - Catalogue is empty (`0 OF 0`). Both gateways must be yours. Gateway needs: base URL, auth method, product website, **OpenAPI 3.1 spec**. Grants settle on **Base** only.
@@ -148,62 +175,119 @@ Everything here was checked on Sept 6. If any of it drifts, fix the plan, not th
               The Graph decentralised network (Agent0 ERC-8004 · Messari Lending 3.1.0)
 
   side effects:  HCS receipt topic (every paid call)  ·  Privy treasury wallet + policy + quorum
-  step-ups:      World Selfie Check (envelope change)  ·  Ledger device (irreversible move)
+  step-ups:      World Selfie Check (envelope change — the only step-up; Ledger is cut)
   front door 2:  Bazantic gateway → MCP + recipes (settles on Base)
 ```
 
 Repository layout (extend the existing flat repo; no monorepo):
 ```
-src/engine/…        (move existing graph/ + score/ here)
-src/api/            server.ts, routes/, x402.ts, hcs.ts, openapi.ts
-src/mcp/            server.ts (stdio + http), tools.ts
-src/agent/          pay.ts — the reference x402 client that pays Assay end-to-end
-src/lending/        Idea B: queries, reconcile.ts, registry loader
-registry/           chains.json, lending.json
-web/                Next.js app: demo console, action trail, Selfie Check step-up, architecture page
-docs/               PLAN.md, ARCHITECTURE.md (+ diagram), FEEDBACK-world.md, demo scripts
-FEEDBACK.md         Uniswap
+src/engine/…              (move existing graph/ + score/ here — pure TS, no HTTP, no Next imports)
+src/lending/              Idea B: queries, reconcile.ts, registry loader
+src/mcp/tools.ts          tool definitions, shared by both transports
+src/agent/pay.ts          the reference x402 client that pays Assay end-to-end (runs locally)
+bin/assay-mcp.ts          stdio MCP server for Claude Desktop / Cursor (runs on the judge's machine)
+registry/                 chains.json, lending.json
+app/                      Next.js App Router — ONE deployable, ONE origin
+  page.tsx                demo console + action trail
+  escalate/page.tsx       World Selfie Check step-up
+  architecture/page.tsx   the Arc-required diagram, rendered
+  api/v1/agents/[ref]/route.ts     x402-gated (Hedera)
+  api/v1/lending/[...]/route.ts    x402-gated (Hedera)
+  api/arc/v1/check/route.ts        Arc Nanopayments
+  api/mcp/route.ts                 MCP Streamable HTTP, stateless, paid tools via @x402/mcp
+  api/openapi/route.ts             OpenAPI 3.1 for Bazantic
+  api/verify-proof/route.ts        World backend verify
+docs/                     PLAN.md, ARCHITECTURE.md, FEEDBACK-world.md, demo scripts
+FEEDBACK.md               Uniswap
 ```
+Every route handler that touches the Hedera SDK declares `export const runtime = "nodejs"`.
+Never put the x402 gate in `middleware.ts` — Next middleware runs on the Edge runtime and the Hedera
+signer needs Node. Gate per route.
 
-Hosting: the service must be **publicly reachable** for Hedera ("live service"), Bazantic (gateway origin) and the demo. Use Railway or Fly.io (either free tier runs a single Node process). Do not demo from a laptop tunnel — the 8 GB machine is for building, not serving.
+### Hosting — **Vercel Hobby (decided Sept 8)**
+
+The service must be publicly reachable for Hedera ("a live service"), for Bazantic (gateway origin),
+for World (the mini app needs a public HTTPS URL) and for the demo. Never a laptop tunnel — the 8 GB
+machine builds, it does not serve.
+
+Vercel Hobby wins on the only three axes that matter here:
+
+| | Vercel Hobby | Render free | Fly.io | Railway |
+|---|---|---|---|---|
+| Actually free | **yes, no card** | yes | no — card + ~$5/mo min | no — trial credit then paid |
+| Cold behaviour | ~sub-second serverless start | **sleeps at 15 min, ~50 s wake** | warm | warm |
+| Runs the stack natively | **Next.js is the product** | Node | Node | Node |
+
+Render's 50-second wake is disqualifying on its own: a judge opens the link, waits, and leaves.
+Vercel also collapses the two deployables into one — the World mini app *must* be Next.js, so putting
+the paid API and the MCP endpoint in the same app buys back roughly a day and removes CORS entirely.
+
+Hobby limits that constrain the design (verified Sept 8 against `vercel.com/docs/limits`):
+- **Function duration: 10 s default, 60 s max.** Set `export const maxDuration = 60` on any route
+  that fans out to several subgraphs, and bound the fan-out — the four-source reconcile must run
+  its queries in parallel, never in a loop.
+- 4 CPU-hrs active / 360 GB-hrs memory / 1M invocations per month. Nowhere near the ceiling.
+- 100 deployments per day. Fine; do not wire a deploy to every commit.
+- Runtime logs kept **1 hour** — capture terminal output for the video at the moment it happens.
+- Hobby projects cannot link to a **Git-organisation** repo. Keep `assay` under your personal account.
+- Serverless means **no in-process state**: MCP over Streamable HTTP must run stateless, and the
+  action trail must not live in a module-level `Map`.
+
+**Where state lives — HCS, not a database (decided Sept 8).** Every paid call already writes a receipt
+to a Hedera Consensus Service topic. Make that the *only* store: receipts, mandate changes and Selfie
+Check approvals are all HCS messages on one topic, read back over the free, unauthenticated mirror
+node — verified reachable Sept 8:
+```
+GET https://testnet.mirrornode.hedera.com/api/v1/topics/{topicId}/messages?limit=100&order=desc
+```
+No Postgres, no Redis, no extra free tier to sign up for, nothing to expire mid-judging. And the pitch
+gets stronger, not weaker: *the action trail is on a public ledger, so you don't have to trust our
+database.* Hedera awards points for real HCS use; this is real use. Cache mirror reads for 5 s.
 
 ---
 
 ## 3. Day-by-day
 
-Deadline is Sept 16 — **confirm the exact submission hour on the ETHGlobal dashboard on day 4 and write it here: ________.**
+Deadline is Sept 16 — **confirm the exact submission hour on the ETHGlobal dashboard today and write it here: ________.**
+
+**Recalibrated Sept 8. Nine days remain, today included.** The original table ran from Sept 6; two days
+are gone, and cutting Ledger returns about half of one. What follows is the honest compression, not the
+old plan with the dates shifted.
 
 | Day | Date | Deliverable | Unlocks |
 |---|---|---|---|
-| 3 | Sep 6 | Plan locked. Accounts (§4). Engine → `src/engine`. Endpoint→agent resolver. Demo fixture. | — |
-| 4 | Sep 7 | Express API, `/openapi.json`, deploy to Railway/Fly. Cross-chain corroboration. | — |
-| 5 | Sep 8 | **x402 gate on Hedera via Blocky402. One real paid request. HashScan trail.** HCS receipt topic. | Hedera Agentic |
-| 6 | Sep 9 | Reference paying agent (`src/agent`) with a spend cap + refusal on `WASH`. Metered tiers. | Hedera bonus |
-| 7 | Sep 10 | **MCP server** (stdio + `/mcp`). Claude Desktop / Cursor config in README. | Graph AI (fresh) |
-| 8 | Sep 11 | **Idea B:** `registry/lending.json`, Messari queries, methodology-aware reconcile, `/v1/lending`. Architecture diagram. | Graph Composable |
-| 9 | Sep 12 | **Arc:** Nanopayments seller route + buyer. `web/` console (frontend requirement). Privy wallet + policy + quorum. | Arc ×2, Privy B2B (+Flow) |
-| 10 | Sep 13 | **World** Selfie Check step-up in `web/` + `docs/FEEDBACK-world.md`. Ledger gate *(only if device)*. | World, Ledger |
-| 11 | Sep 14 | **Bazantic** two gateways + two recipes. **Uniswap** quote step + `FEEDBACK.md` + form. **Harness PR.** | Bazantic ×2, Uniswap, Harness |
-| 12 | Sep 15 | Videos: ≤5 min (Hedera/Ledger/Arc), 2–4 min (Graph). README final. Clean-clone test. | — |
-| 13 | Sep 16 | Submit to every eligible track before the hour above. Bazantic username in submission. | — |
+| 5 | **Sep 8 (today)** | Accounts and lead-time requests (§4) **first**. Then Phase A: engine → `src/engine`, endpoint→agent resolver, cross-chain corroboration, pinned fixtures. | — |
+| 6 | Sep 9 | Phase B: Next.js app, deployed to Vercel, live URL, `/api/openapi`, unpaid `/api/v1/agents/[ref]` returning the verdict + provenance. | — |
+| 7 | Sep 10 | **Phase C: x402 gate on Hedera via Blocky402. One real paid request. HashScan. HCS receipt topic.** | **Hedera Agentic** |
+| 8 | Sep 11 | Phase D: reference paying agent with a spend cap + refusal on `WASH`; metered tiers. Phase E: MCP — `bin/assay-mcp.ts` (stdio) and `/api/mcp` with `@x402/mcp` paid tools. | Hedera bonus, Graph AI (fresh) |
+| 9 | Sep 12 | Phase F: `registry/lending.json`, Messari queries, methodology-aware reconcile, `/api/v1/lending`. `docs/ARCHITECTURE.md` + rendered diagram page. | Graph Composable |
+| 10 | Sep 13 | Phase G: Arc Nanopayments route + buyer; Privy wallet + policy + key quorum + one live transfer. | Arc ×2, Privy ×2 |
+| 11 | Sep 14 | Phase H: World Selfie Check step-up + `docs/FEEDBACK-world.md`. | World |
+| 12 | Sep 15 | Phase I: Bazantic two gateways + two recipes; Uniswap quote + `FEEDBACK.md` + form; Harness PR. Then both videos. | Bazantic ×2, Uniswap, Harness |
+| 13 | Sep 16 | Buffer. README, clean-clone test, submit to every eligible track before the hour above. Bazantic username in the submission. | — |
+
+**If a day slips, drop in this order** — decide once, now, so you never spend a day deliberating:
+Tier C (ENS, Chainlink) → Bazantic *Agentify* (keep *Best Recipe*) → Arc *DeFi* → Privy *Financial flow*.
+**Never drop, at any cost:** Phase C (Hedera), Phase E (MCP), Phase F (Composable). Those three are the
+bounty you said you came for, and they are the only ones with no substitute.
 
 Commit at least once per day. Tag the day's last commit `day-N`.
 
 ---
 
-## 4. Day 3 — accounts and forms (you, not Opus)
+## 4. Today (Sep 8) — accounts and forms (you, not Opus)
 
-Do these in this order; each has lead time.
+Do these before writing code; each has lead time and none of it is parallelisable later.
 
-- [x] World Sandbox form — done Sept 6.
+- [x] World Sandbox form — submitted Sept 6.
+- [ ] **World, Android track:** Developer Portal → **World ID Sandbox** → Android → submit the Google account you use with the Play Store → wait for access *before* opening the testing link. Sign the browser and the Play Store into that same account.
 - [ ] Email `developers@toolsforhumanity.com`: *"Requesting Selfie Check (Beta) enablement for app_id ____ for ETHOnline 2026 (Selfie Check track)."* Create the app first at `https://developer.world.org` → copy `app_id` and create an action `assay-escalation`.
 - [ ] Hedera: `portal.hedera.com` → two **ECDSA** testnet accounts. Save as `HEDERA_AGENT_ACCOUNT_ID/PRIVATE_KEY` and `HEDERA_SERVICE_ACCOUNT_ID/PRIVATE_KEY`. Fund HBAR from the portal.
 - [ ] Circle: `faucet.circle.com` → Arc testnet USDC to a fresh EVM key (`ARC_BUYER_PRIVATE_KEY`); a second address for `ARC_SELLER_ADDRESS`. Optionally Hedera-testnet USDC too.
 - [ ] Privy: `dashboard.privy.io` → app → `PRIVY_APP_ID`, `PRIVY_APP_SECRET`; create an authorization key (`PRIVY_AUTHORIZATION_KEY`).
-- [ ] Railway or Fly account. Decide: ________.
+- [x] Hosting: **Vercel Hobby** — decided Sept 8. Sign in with GitHub, keep `assay` on your personal account (Hobby cannot link Git-org repos). No card.
 - [ ] Bazantic: account exists. Note your username here: ________.
 - [ ] Uniswap developer platform account (`developers.uniswap.org/dashboard`) → API key.
-- [ ] **Decision:** own a Ledger device? ☐ yes ☐ no → if no, delete day-10's Ledger line.
 - [ ] **Decision:** external non-sponsor API for Bazantic "Agentify" — default **Sourcify** (`https://sourcify.dev/server`, no auth: *is the counterparty's contract verified?*); alternative GoPlus address security. Choose: ________.
 
 Never commit `.env`. Every new secret goes to `.env.example` as an empty key with a comment.
@@ -214,7 +298,7 @@ Never commit `.env`. Every new secret goes to `.env.example` as an empty key wit
 
 Paste each *Opus brief* into Claude Code from the repo root. Each brief assumes the previous phase's acceptance passed.
 
-### Phase A — engine hardening (day 3, ~3 h)
+### Phase A — engine hardening (Sep 8, ~3 h)
 
 **Opus brief**
 > Read `docs/PLAN.md` §0–§2 and `CLAUDE.md`. Move `src/graph` and `src/score` under `src/engine/` and fix imports; keep `npm run assay` working. Then add three things to the engine, each with a small unit test (node:test, no new test deps):
@@ -228,31 +312,36 @@ Paste each *Opus brief* into Claude Code from the repo root. Each brief assumes 
 - `npm run assay -- --resolve https://<some mcpEndpoint from a Base registration>` returns at least one agent.
 - Three fixture files exist with block numbers in their names.
 
-### Phase B — HTTP API + deploy (day 4)
+### Phase B — Next.js app + Vercel deploy (Sep 9)
 
 **Opus brief**
-> Build `src/api/server.ts` with Express 4. Routes (all JSON, all return the full `AssayReport`):
-> `GET /v1/check/:chain/:agentId`, `GET /v1/corroborate/:chain/:agentId`, `GET /v1/resolve?url=`, `GET /v1/chains`, `GET /healthz`. Add `GET /openapi.json` generated from a hand-written OpenAPI **3.1** document in `src/api/openapi.ts` (Bazantic requires 3.1; include `servers`, per-route `summary`, `parameters`, and a `Report` schema). Add `GET /v1/preview/:chain/:agentId` that returns only `{verdict, confidence}` — this is the free tier. Add structured request logging and a 10 req/min per-IP limit on free routes. Add `Dockerfile` (node:24-slim, `npm ci --omit=dev`, `npx tsx src/api/server.ts` is fine for the hackathon) and a `railway.json`/`fly.toml` per the choice in §4. Document deploy in README.
+> Add Next.js 15 (App Router, TypeScript) **in this repo, at the root** — one deployable, per §2. `npx create-next-app` into a temp dir and merge, or hand-write `app/` and add `next react react-dom`; do not create a `web/` subfolder and do not touch `src/engine`, which stays framework-free and importable from route handlers via the `@/` alias.
+> Route handlers, all JSON, all returning the full `AssayReport`, every one declaring `export const runtime = "nodejs"` and `export const maxDuration = 60`:
+> `GET /api/v1/agents/[chain]/[agentId]`, `GET /api/v1/corroborate/[chain]/[agentId]`, `GET /api/v1/resolve?url=`, `GET /api/v1/chains`, `GET /api/healthz`, and `GET /api/v1/preview/[chain]/[agentId]` returning only `{verdict, confidence}` — the free tier.
+> `GET /api/openapi` serves a hand-written OpenAPI **3.1** document from `src/openapi.ts` (Bazantic requires 3.1: include `servers`, per-route `summary`, `parameters`, a `Report` schema). Structured request logging; a 10 req/min per-IP limit on free routes only.
+> Deploy: `npx vercel --prod` from the repo root, linked to your **personal** GitHub account (Hobby cannot link Git-org repos). Put `GRAPH_API_KEY` in Vercel project env, not in the repo. Record the production URL in README and in `.env.example` as `PUBLIC_BASE_URL`.
+> No `Dockerfile`, no `fly.toml`, no `railway.json` — that decision is closed.
 
 **Acceptance**
-- `curl https://<public-url>/healthz` → 200 from the hosted service.
-- `curl https://<public-url>/v1/check/base/25975 | jq .assessment.verdict` → `"WASH_REPUTATION_DETECTED"`.
-- `/openapi.json` validates (use `npx @redocly/cli lint` once, don't add it as a dep).
+- `curl https://<vercel-url>/api/healthz` → 200 from the hosted deployment, not localhost.
+- `curl https://<vercel-url>/api/v1/agents/base/25975 | jq .assessment.verdict` → `"WASH_REPUTATION_DETECTED"`.
+- `/api/openapi` validates (`npx @redocly/cli lint` once; don't add it as a dep).
+- A cold request (first after ≥15 min idle) returns in under 3 s. If it doesn't, the fan-out is serial — fix it now, not on Sep 12.
 
-### Phase C — x402 on Hedera via Blocky402 (day 5) — **the bounty**
+### Phase C — x402 on Hedera via Blocky402 (Sep 10) — **the bounty**
 
 **Opus brief**
-> Gate the paid routes with x402 using exactly the wiring in `docs/PLAN.md` §1 (Hedera). Facilitator `https://api.testnet.blocky402.com`. Register `hedera:*` with `ExactHederaScheme`. Price tiers in `src/api/x402.ts` as a single table: `preview` free · `check` $0.001 · `resolve` $0.0005 · `corroborate` $0.004 · `lending` $0.002. `payTo` = `HEDERA_SERVICE_ACCOUNT_ID`. Start with **HBAR (`0.0.0`)** so no token association is needed; make USDC (`0.0.429274`) a config switch. On first boot call the facilitator's `/supported` and log the advertised `hedera:testnet` kind and `feePayer`; refuse to start if absent.
-> Then write `src/agent/pay.ts`: an x402 client (`@x402/fetch` + `@x402/hedera` client signer from `HEDERA_AGENT_*`) that calls `/v1/check/base/25975`, prints the 402 → payment → 200 sequence, and prints the settlement transaction id and a HashScan link (`https://hashscan.io/testnet/transaction/<id>`). It must **sign only**, never submit.
-> Then `src/api/hcs.ts`: on every settled paid call, submit a compact receipt `{type:"assay.receipt.v1", route, payer, amount, asset, settlementTxId, verdict, deployment, block, ts}` to an HCS topic (`HCS_TOPIC_ID`; add `npm run hcs:create-topic`). Failures to write the receipt must not fail the paid response — log and continue.
+> Gate the paid route handlers with `@x402/next` using exactly the wiring in §1 (Hedera). **Per route — never `middleware.ts`**, which runs on Edge where the Hedera signer cannot. Facilitator `https://api.testnet.blocky402.com`. Register `hedera:*` with `ExactHederaScheme`. Price tiers in `src/x402.ts` as a single table: `preview` free · `agents` $0.001 · `resolve` $0.0005 · `corroborate` $0.004 · `lending` $0.002. `payTo` = `HEDERA_SERVICE_ACCOUNT_ID`. Start with **HBAR (`0.0.0`)** so no token association is needed; make USDC (`0.0.429274`) a config switch. On cold start call the facilitator's `/supported`, log the advertised `hedera:testnet` kind and `feePayer`, and **fail the request with 503** if absent — on serverless there is no boot to refuse. Cache that check for 60 s.
+> Then write `src/agent/pay.ts`: an x402 client (`@x402/fetch` + `@x402/hedera` client signer from `HEDERA_AGENT_*`) that calls `/api/v1/agents/base/25975`, prints the 402 → payment → 200 sequence, and prints the settlement transaction id and a HashScan link (`https://hashscan.io/testnet/transaction/<id>`). It must **sign only**, never submit.
+> Then `src/hcs.ts`: on every settled paid call, submit a compact receipt `{type:"assay.receipt.v1", route, payer, amount, asset, settlementTxId, verdict, deployment, block, ts}` to an HCS topic (`HCS_TOPIC_ID`; add `npm run hcs:create-topic`). Failures to write the receipt must not fail the paid response — log and continue.
 
 **Acceptance (record all three on screen — they go in the video)**
-- `curl -i https://<url>/v1/check/base/25975` → `HTTP/1.1 402` with `PaymentRequirements` naming `hedera:testnet`.
+- `curl -i https://<vercel-url>/api/v1/agents/base/25975` → `HTTP/1.1 402` with `PaymentRequirements` naming `hedera:testnet`.
 - `npm run agent:pay` → `200`, verdict printed, HashScan link resolves to a real transfer to the service account.
 - The HCS topic on HashScan shows the receipt message.
 - README section "Payment flow" written with the exact sequence and the two curl outputs. **Tag `hedera-paid-request`.**
 
-### Phase D — paying agent with a mandate (day 6)
+### Phase D — paying agent with a mandate (Sep 11 am)
 
 **Opus brief**
 > Extend `src/agent/` into a small reference agent that (1) is given a counterparty (`chain:agentId` or an endpoint URL), (2) pays Assay for a check, (3) refuses to proceed on `WASH_REPUTATION_DETECTED`, requires a human step-up on `UNPROVEN` above a configurable spend, and proceeds on `VERIFIED`. The mandate is a JSON file `mandate.json` `{maxSpendUsd, allowedVerdicts, requireStepUpAbove, expiresAt}`. Use `@x402/fetch` lifecycle hooks (`onBeforePaymentCreation`) to enforce `maxSpendUsd` at the payment layer, not just in app logic. Print an **action trail**: intent → evidence bought (what, price, tx) → decision → next action. Add `npm run agent:demo` that runs the three fixture agents in a row.
@@ -260,49 +349,53 @@ Paste each *Opus brief* into Claude Code from the repo root. Each brief assumes 
 **Acceptance**
 - `npm run agent:demo` shows one refusal (WASH), one step-up request (UNPROVEN), and the hook aborting a payment above the cap.
 
-### Phase E — MCP server (day 7)
+### Phase E — MCP server, paid tools (Sep 11 pm)
 
 **Opus brief**
-> Add `src/mcp/server.ts` with `@modelcontextprotocol/sdk` 1.30: tools `assay_check(chain, agentId)`, `assay_resolve(url)`, `assay_corroborate(chain, agentId)`, `assay_chains()`, later `lending_position_safety(...)`. Each tool result is the report as structured content **plus** a short natural-language summary that always ends with the provenance line (`deployment … block …`). Provide two transports: stdio (`npm run mcp`) and Streamable HTTP mounted at `/mcp` on the Express app. Rate-limit `/mcp` like the free routes. Write `docs/MCP.md` with Claude Desktop and Cursor config snippets. Add a `resources` entry exposing `registry/chains.json` read-only.
+> Add `src/mcp/tools.ts` with `@modelcontextprotocol/sdk` 1.30: tools `assay_check(chain, agentId)`, `assay_resolve(url)`, `assay_corroborate(chain, agentId)`, `assay_chains()`, later `lending_position_safety(...)`. Each tool result is the report as structured content **plus** a short natural-language summary that always ends with the provenance line (`deployment … block …`). Share the tool definitions from `src/mcp/tools.ts` across two transports:
+> 1. **stdio** — `bin/assay-mcp.ts`, run by the judge on their own machine (`npm run mcp`). Free tools only; it calls the hosted API.
+> 2. **Streamable HTTP** at `app/api/mcp/route.ts`, **stateless** (`sessionIdGenerator: undefined`) because Vercel has no persistent process. Here, gate the expensive tools with `@x402/mcp` per §1: `assay_agent` and `lending_position_safety` wrapped in `createPaymentWrapper(...)` at $0.05 and $0.02; `assay_chains`, `assay_thresholds` and `assay_resolve` free and unwrapped. This is one artifact serving two tracks — a paid MCP tool is simultaneously the Hedera "service worth paying for" and the Graph AI tooling surface.
+> Rate-limit the free HTTP tools like the free routes. Write `docs/MCP.md` with Claude Desktop and Cursor config snippets. Add a `resources` entry exposing `registry/chains.json` read-only.
 
 **Acceptance**
 - From Claude Desktop (or `npx @modelcontextprotocol/inspector`), calling `assay_check` on `base 25975` returns the WASH verdict with the deployment hash in the text.
+- `npx @modelcontextprotocol/inspector` against `https://<vercel-url>/api/mcp` lists the tools, and calling `assay_agent` **without payment returns a 402-shaped error**; the reference agent from Phase D calls it and pays. Record this — it is the strongest single shot in the Hedera video.
 - The README has a "Use from Claude / Cursor" section. This is the Graph AI (From Scratch) submission surface.
 
-### Phase F — Idea B: lending evidence (day 8)
+### Phase F — Idea B: lending evidence (Sep 12)
 
 **Opus brief**
 > Add `registry/lending.json` with the six Messari deployments from `docs/PLAN.md` §1 (id, network, protocol, schema/subgraph/methodology versions). On load, verify each entry by querying `protocols { id name network schemaVersion subgraphVersion methodologyVersion }` and `_meta`; if the on-chain versions disagree with the registry, log a warning and trust the subgraph. Detect the compound-v3-base duplicate-ID problem by checking `protocols[0].network` and mark the entry `unusable` with a reason if it isn't Base.
-> Implement `src/lending/` : `marketSnapshot(source, marketOrAsset)` (Lending/CDP 3.1.0 `markets` — totalValueLockedUSD, totalBorrowBalanceUSD, rates, liquidationThreshold, inputToken), `positionSafety(source, account)` (positions + health), and `reconcile(a, b)` that returns `AGREE | DISAGREE | METHODOLOGY_MISMATCH | SCHEMA_MISMATCH` — comparison is only attempted when `schemaVersion` and `methodologyVersion` match; disagreement beyond a tolerance yields `EVIDENCE_INCONSISTENT` and the API refuses to return a number. Expose `GET /v1/lending/market?asset=USDC&sources=aave-v3-ethereum,aave-v3-base` and `/v1/lending/position`. Add the MCP tool.
+> Implement `src/lending/` : `marketSnapshot(source, marketOrAsset)` (Lending/CDP 3.1.0 `markets` — totalValueLockedUSD, totalBorrowBalanceUSD, rates, liquidationThreshold, inputToken), `positionSafety(source, account)` (positions + health), and `reconcile(a, b)` that returns `AGREE | DISAGREE | METHODOLOGY_MISMATCH | SCHEMA_MISMATCH` — comparison is only attempted when `schemaVersion` and `methodologyVersion` match; disagreement beyond a tolerance yields `EVIDENCE_INCONSISTENT` and the API refuses to return a number. Expose `GET /api/v1/lending/market?asset=USDC&sources=aave-v3-ethereum,aave-v3-base` and `/api/v1/lending/position`. Add the MCP tool.
 > Write `docs/ARCHITECTURE.md` and produce the architecture diagram (Mermaid in the doc **and** a PNG export in `docs/architecture.png` — Arc requires a diagram).
 
 **Acceptance**
 - `aave-v3-ethereum` vs `aave-v3-base` → `AGREE`/`DISAGREE` with numbers; `aave-v3-ethereum` vs `compound-v3-ethereum` → `METHODOLOGY_MISMATCH`; anything vs `moonwell-base` → `SCHEMA_MISMATCH`. All live.
 - Adding a seventh lending source is a one-line JSON change. Record that moment for the Graph video.
 
-### Phase G — Arc + web console + Privy (day 9)
+### Phase G — Arc + console + Privy (Sep 13)
 
 **Opus brief**
-> **Arc:** add `/arc/v1/check/:chain/:agentId` gated by `createGatewayMiddleware({ sellerAddress: ARC_SELLER_ADDRESS }).require("$0.001")` from `@circle-fin/x402-batching/server` (keep the Hedera routes untouched — two rails, one engine). Add `src/agent/pay-arc.ts` using `GatewayClient({ chain: "arcTestnet", privateKey })` → `deposit` → `pay`. Document Arc chain id `5042002` and the USDC-as-gas note in README.
-> **Web:** scaffold `web/` (Next.js, App Router, TypeScript). Pages: `/` demo console (enter chain:id or URL → verdict card with findings + provenance, "paid via" badge with HashScan/Arcscan link), `/trail` action trail of the reference agent, `/architecture` rendering the diagram. Read from the hosted API; no mock data anywhere.
+> **Arc:** add `app/api/arc/v1/check/[chain]/[agentId]/route.ts` gated by `createGatewayMiddleware({ sellerAddress: ARC_SELLER_ADDRESS }).require("$0.001")` from `@circle-fin/x402-batching/server` (keep the Hedera routes untouched — two rails, one engine). Add `src/agent/pay-arc.ts` using `GatewayClient({ chain: "arcTestnet", privateKey })` → `deposit` → `pay`. Document Arc chain id `5042002` and the USDC-as-gas note in README.
+> **Console:** the Next app already exists from Phase B — now add the pages Arc requires (frontend **and** backend **and** a diagram, all three): `/` demo console (enter `chain:id` or a URL → verdict card with findings + provenance, "paid via" badge linking to HashScan/Arcscan), `/trail` reading the action trail from the **HCS mirror node**, `/architecture` rendering `docs/ARCHITECTURE.md`'s diagram as a real page. Server components call `src/engine` directly; no mock data anywhere.
 > **Privy:** `src/treasury/privy.ts` with `@privy-io/node`: create (or load) an org treasury wallet on Base Sepolia, attach a policy allowing transfers only to `ARC_SELLER_ADDRESS`/service addresses with a per-tx cap, create a key quorum used for "raise the cap" escalations, and perform **one real testnet USDC transfer** through the wallet (`npm run treasury:demo`). Persist wallet/policy/quorum ids in `.env`. Write the "How Privy enables Assay" paragraph in README (B2B: treasury + approval workflow + policy control).
 
 **Acceptance**
 - Arc: 402 → paid → 200 on the hosted URL; the batch settlement is visible on `testnet.arcscan.app`.
-- `web/` deployed (Vercel is fine) and showing live verdicts.
+- The three pages are live on the Vercel URL and showing live verdicts; `/architecture` is linkable for the Arc submission.
 - Privy: one live transfer hash; policy and quorum ids in the README.
 
-### Phase H — World step-up (+ Ledger if device) (day 10)
+### Phase H — World step-up (Sep 14)
 
 **Opus brief**
-> In `web/`, add `/escalate`: when the reference agent requests a mandate change (raise cap / add venue / extend expiry), render `IDKitInviteCodeRequestWidget` from `@worldcoin/idkit` with the `selfieCheckLegacy` preset, `environment: "sandbox"`, `app_id` and action `assay-escalation`. `handleVerify` POSTs to `web/app/api/verify-proof` which calls `POST https://developer.world.org/api/v4/verify/{rp_id}` and, on success, writes an approval record the agent polls (`/v1/mandate/:id/approvals` on the API). Frame it as **abuse-prevention / continuity**, not KYC. Keep `docs/FEEDBACK-world.md` open in the editor and log every friction point as you go (docs, portal, sandbox install, invite-code handling, error codes).
-> *If a Ledger device is present:* irreversible moves (the treasury transfer above the cap) shell out to `wallet-cli send … ` and wait for device approval; capture the terminal "Review on device" line for the video. Otherwise skip entirely — do not stub it.
+> Add `app/escalate/page.tsx`: when the reference agent requests a mandate change (raise cap / add venue / extend expiry), render `IDKitInviteCodeRequestWidget` from `@worldcoin/idkit` with the `selfieCheckLegacy` preset, `environment: "sandbox"`, `app_id` and action `assay-escalation`. `handleVerify` POSTs to `app/api/verify-proof/route.ts` which calls `POST https://developer.world.org/api/v4/verify/{rp_id}` and, on success, writes an approval record the agent polls (`/api/v1/mandate/[id]/approvals`). Frame it as **abuse-prevention / continuity**, not KYC. Keep `docs/FEEDBACK-world.md` open in the editor and log every friction point as you go (docs, portal, sandbox install, invite-code handling, error codes).
+> Persist the approval as an **HCS message on the receipt topic**, not in memory — the API is serverless. The agent polls `/api/v1/mandate/:id/approvals`, which reads the mirror node. Test on Android: register the app, then scan `https://worldcoin.org/mini-app?app_id=app_…`. There is no Ledger tier — irreversible moves are gated by the Privy key quorum from Phase G instead, which is a real control and is demoable.
 
 **Acceptance**
 - A Selfie Check completed in the sandbox app flips an escalation to `approved`, and the agent proceeds. Recorded.
 - `docs/FEEDBACK-world.md` has ≥ 8 concrete observations.
 
-### Phase I — Bazantic, Uniswap, Harness PR (day 11)
+### Phase I — Bazantic, Uniswap, Harness PR (Sep 15)
 
 **Opus brief**
 > **Bazantic:** with `@bazantic/cli` add gateway 1 = the Assay API (`--spec-url https://<url>/openapi.json`), gateway 2 = the external API chosen in §4 (write a minimal OpenAPI 3.1 for it under `docs/openapi/`). Create two recipes: (a) *"Pre-flight before paying an agent"* — Assay check → external verification → **Uniswap API quote** for the amount to be paid; (b) *"Is this endpoint safe to pay?"* — resolve → check → external. Test each with `baz grant create` + `baz curl … --max-amount`. Record both screen captures.
@@ -314,10 +407,10 @@ Paste each *Opus brief* into Claude Code from the repo root. Each brief assumes 
 - `FEEDBACK.md` committed, form submitted (screenshot saved).
 - PR URL in README.
 
-### Phase J — videos, README, submission (days 12–13)
+### Phase J — videos, README, submission (Sep 15 pm – 16)
 
 Two cuts, scripted in `docs/demo/SCRIPT.md`:
-- **≤ 5 min (Hedera / Arc / Ledger / Privy):** problem (30 s: the 309k-review farm) → 402 → paid → 200 with HashScan → HCS receipt → agent refuses WASH → step-up via Selfie Check → Privy policy blocks over-cap → architecture.
+- **≤ 5 min (Hedera / Arc / Privy):** problem (30 s: the 309k-review farm) → 402 → paid → 200 with HashScan → HCS receipt → agent refuses WASH → step-up via Selfie Check → Privy policy blocks over-cap → architecture.
 - **2–4 min (The Graph):** naive average vs Assay on `base:25975` → MCP tool call from Claude → lending reconcile `METHODOLOGY_MISMATCH` live → add a source by JSON → provenance line.
 
 README must have: one-paragraph pitch, setup from clean clone, architecture (link diagram), payment flow with real outputs, per-sponsor "where to look" table (file:line), Bazantic username, PR link, video links.
@@ -337,14 +430,13 @@ README must have: one-paragraph pitch, setup from clean clone, architecture (lin
 | Arc — Agentic Economy | Agent with decision logic that pays over Arc | Phase G |
 | Privy — B2B | Wallet + policy + quorum + approval workflow; source | Phase G |
 | Privy — Financial flow | One live transfer | Phase G |
-| World — Selfie Check | Working step-up in sandbox; feedback doc | Phase H |
-| Ledger — AI Agents | Device-confirmed irreversible action *(only with device)* | Phase H |
+| World — Selfie Check | Working step-up in the Android sandbox; feedback doc | Phase H |
 | Bazantic — Best Recipe | Recipe using Uniswap API + Assay; recording; username | Phase I |
 | Bazantic — Agentify | External API gateway + recipe; recording; username | Phase I |
 | Uniswap — Stack Contribution | `FEEDBACK.md`, form, README pointers | Phase I |
 | Hedera — Harness OSS | Open PR, ≤5 min video of the improvement | Phase I |
 
-Tier C (only if days 8–11 land early): ENSv2 subnames per agent with a Permissioned Resolver holding the mandate hash; Chainlink CRE `handlerInTee` evaluating private mandate thresholds; Chainlink liquidation challenge (`join()` from Sept 8).
+Tier C (only if Sep 12–14 land early): ENSv2 subnames per agent with a Permissioned Resolver holding the mandate hash; Chainlink CRE `handlerInTee` evaluating private mandate thresholds; Chainlink liquidation challenge (`join()` from Sept 8).
 
 ---
 
@@ -368,8 +460,10 @@ Tier C (only if days 8–11 land early): ENSv2 subnames per agent with a Permiss
 |---|---|
 | Blocky402 testnet down on demo day | Record the paid request the day it first works (Phase C acceptance). Keep the recording. |
 | The Base farm stops | `--fixture` replay, labelled `source: fixture`, with the block number on screen. |
-| World sandbox / Selfie flag not granted in time | Ship the escalation with the `orbLegacy` preset in sandbox, state plainly in the feedback doc that Selfie Check was requested on Sept 6 and not enabled. Still submit — the feedback doc is graded. |
-| No Ledger device | Cut Ledger; move the day to polish. |
+| World sandbox / Selfie flag not granted in time | Ship the escalation with the `orbLegacy` preset in sandbox; state plainly in the feedback doc the dates you requested Sandbox (Sept 6) and the Selfie Check flag, and that it was not enabled in time. Still submit — the feedback doc is graded, and "we asked on these dates and heard nothing" is itself the most useful feedback they will receive. |
+| ~~No Ledger device~~ | **Resolved Sept 8: cut.** No device, no simulator, no honest demo. Do not revisit. |
 | Arc mainnet not open by Sept 30 | "Deployment-ready" qualifies: mainnet config in `registry/`, documented switch. |
-| Free-tier host sleeps | Add a 5-min external uptime ping (cron-job.org) from day 4. |
+| Vercel 10 s function timeout on a multi-source reconcile | `export const maxDuration = 60` and fan out the subgraph queries with `Promise.all`, never a loop. Test the four-source path against the deployed URL, not locally, before Sep 12 ends. |
+| Vercel runtime logs expire after 1 hour | Capture terminal and HashScan output the moment a thing first works — the Phase C acceptance recording is the artifact, not the log. |
+| Two days already lost (Sept 6–7) | Absorbed by cutting Ledger and by collapsing API + web into one Next.js deployable. If Sep 10 ends without a paid Hedera request, stop adding tracks and spend Sep 11 finishing it — it is the one bounty you named. |
 | 8 GB laptop | Build locally, serve remotely; never run web + api + agent + browser at once for the recording — record against the hosted URL. |
