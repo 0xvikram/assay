@@ -54,7 +54,16 @@ console.log(`\n  ${b("2. sign a payment, retry")}  ${dim(`as ${accountId}`)}`);
 const mandate = loadMandate();
 const ledger: Ledger = { spent: 0n, payments: [] };
 const signer = createClientHederaSigner(accountId, PrivateKey.fromStringECDSA(key), { network: "hedera:testnet" });
-const client = enforce(new x402Client().register("hedera:*", new ExactHederaScheme(signer)), mandate, ledger);
+// HBAR is not one of the client's built-in "default assets", so it must be
+// opted in explicitly — and the opt-in carries the mandate's per-payment cap,
+// a second fence under the hook in enforce().
+const client = enforce(
+  new x402Client()
+    .register("hedera:*", new ExactHederaScheme(signer))
+    .setSpendControls({ allowedAssets: [{ network: "hedera:testnet", asset: "0.0.0", maxAmountPerPayment: mandate.maxPaymentAmount }] }),
+  mandate,
+  ledger,
+);
 const paidFetch = wrapFetchWithPayment(fetch, client);
 console.log(`     ${dim(`mandate: per-payment cap ${mandate.maxPaymentAmount}, run cap ${mandate.maxTotalAmount}, expires ${mandate.expiresAt}`)}`);
 
