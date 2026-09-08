@@ -6,3 +6,6 @@ dist/
 .next/
 .vercel/
 next-env.d.ts
+.vercel
+.env*
+!.env.example
