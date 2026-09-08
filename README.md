@@ -121,3 +121,14 @@ Every paid route's `402` lists two ways to pay and the client picks:
 
 Prices are the same tiers on both: a cross-chain corroboration costs four single reads.
 Settled calls on either rail leave a receipt on the HCS topic.
+
+## Uniswap
+
+The pre-flight recipe's quote step calls the Trading API (`src/agent/quote.ts`,
+`npm run agent:quote -- --chain 8453 --in USDC --out WETH --amount 1000000`). Nothing is
+executed — the mandate decides. Developer feedback with exact doc pages: [FEEDBACK.md](FEEDBACK.md).
+
+## Bazantic
+
+Two gateways (Assay via `/api/openapi`; Sourcify via its published OpenAPI) and two recipes:
+[docs/bazantic/README.md](docs/bazantic/README.md).

@@ -17,7 +17,8 @@
     "mcp": "tsx --env-file=.env bin/assay-mcp.ts",
     "agent:pay-arc": "tsx --env-file=.env src/agent/pay-arc.ts",
     "treasury:setup": "tsx --env-file=.env scripts/treasury-setup.ts",
-    "treasury:demo": "tsx --env-file=.env scripts/treasury-demo.ts"
+    "treasury:demo": "tsx --env-file=.env scripts/treasury-demo.ts",
+    "agent:quote": "tsx --env-file=.env src/agent/quote.ts"
   },
   "devDependencies": {
     "@types/node": "^22.10.2",
