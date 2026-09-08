@@ -327,7 +327,7 @@ Never commit `.env`. Every new secret goes to `.env.example` as an empty key wit
 
 Paste each *Opus brief* into Claude Code from the repo root. Each brief assumes the previous phase's acceptance passed.
 
-### Phase A — engine hardening (Sep 8, ~3 h)
+### Phase A — engine hardening (Sep 8, ~3 h) — ✅ done Sep 8 10:07, `8f58caa`
 
 **Opus brief**
 > Read `docs/PLAN.md` §0–§2 and `CLAUDE.md`. Move `src/graph` and `src/score` under `src/engine/` and fix imports; keep `npm run assay` working. Then add three things to the engine, each with a small unit test (node:test, no new test deps):
@@ -341,7 +341,7 @@ Paste each *Opus brief* into Claude Code from the repo root. Each brief assumes 
 - `npm run assay -- --resolve https://<some mcpEndpoint from a Base registration>` returns at least one agent.
 - Three fixture files exist with block numbers in their names.
 
-### Phase B — Next.js app + Vercel deploy (Sep 9)
+### Phase B — Next.js app + Vercel deploy (Sep 9) — ✅ code Sep 8 `5c731e5`; ⏳ hosted URL (Vercel import)
 
 **Opus brief**
 > Add Next.js 16 (App Router, TypeScript) **in this repo, at the root** — one deployable, per §2. `npx create-next-app` into a temp dir and merge, or hand-write `app/` and add `next react react-dom`; do not create a `web/` subfolder and do not touch `src/engine`, which stays framework-free and importable from route handlers via the `@/` alias.
@@ -357,7 +357,7 @@ Paste each *Opus brief* into Claude Code from the repo root. Each brief assumes 
 - `/api/openapi` validates (`npx @redocly/cli lint` once; don't add it as a dep).
 - A cold request (first after ≥15 min idle) returns in under 3 s. If it doesn't, the fan-out is serial — fix it now, not on Sep 12.
 
-### Phase C — x402 on Hedera via Blocky402 (Sep 10) — **the bounty**
+### Phase C — x402 on Hedera via Blocky402 (Sep 10) — **the bounty** — ✅ code + live 402 Sep 8 `1ced8f4`; ⏳ paid request (Hedera accounts)
 
 **Opus brief**
 > Gate the paid route handlers with `@x402/next` using exactly the wiring in §1 (Hedera). **Per route — never `middleware.ts`**, which runs on Edge where the Hedera signer cannot. Facilitator `https://api.testnet.blocky402.com`. Register `hedera:*` with `ExactHederaScheme`. Price tiers in `src/x402.ts` as a single table: `preview` free · `agents` $0.001 · `resolve` $0.0005 · `corroborate` $0.004 · `lending` $0.002. `payTo` = `HEDERA_SERVICE_ACCOUNT_ID`. Start with **HBAR (`0.0.0`)** so no token association is needed; make USDC (`0.0.429274`) a config switch. On cold start call the facilitator's `/supported`, log the advertised `hedera:testnet` kind and `feePayer`, and **fail the request with 503** if absent — on serverless there is no boot to refuse. Cache that check for 60 s.
@@ -370,7 +370,7 @@ Paste each *Opus brief* into Claude Code from the repo root. Each brief assumes 
 - The HCS topic on HashScan shows the receipt message.
 - README section "Payment flow" written with the exact sequence and the two curl outputs. **Tag `hedera-paid-request`.**
 
-### Phase D — paying agent with a mandate (Sep 11 am)
+### Phase D — paying agent with a mandate (Sep 11 am) — ✅ code Sep 8 `7a2def2`; ⏳ live receipt (Base Sepolia ETH)
 
 **Opus brief**
 > Extend `src/agent/` into a small reference agent that (1) is given a counterparty (`chain:agentId` or an endpoint URL), (2) pays Assay for a check, (3) refuses to proceed on `WASH_REPUTATION_DETECTED`, requires a human step-up on `UNPROVEN` above a configurable spend, and proceeds on `VERIFIED`. The mandate is a JSON file `mandate.json` `{maxSpendUsd, allowedVerdicts, requireStepUpAbove, expiresAt}`. Use `@x402/fetch` lifecycle hooks (`onBeforePaymentCreation`) to enforce `maxSpendUsd` at the payment layer, not just in app logic. Print an **action trail**: intent → evidence bought (what, price, tx) → decision → next action. Add `npm run agent:demo` that runs the three fixture agents in a row.
@@ -380,7 +380,7 @@ Paste each *Opus brief* into Claude Code from the repo root. Each brief assumes 
 - `npm run agent:demo` shows one refusal (WASH), one step-up request (UNPROVEN), and the hook aborting a payment above the cap.
 - After `npm run agent:pay`, `npm run assay -- base-sepolia:<assayId>` shows ≥1 review with a payment proof pointing at the HashScan transaction. **Tag `receipt-loop-closed`.**
 
-### Phase E — MCP server, paid tools (Sep 11 pm)
+### Phase E — MCP server, paid tools (Sep 11 pm) — ✅ Sep 8 `ae2207d`, both transports smoke-tested
 
 **Opus brief**
 > Add `src/mcp/tools.ts` with `@modelcontextprotocol/sdk` 1.30: tools `assay_check(chain, agentId)`, `assay_resolve(url)`, `assay_corroborate(chain, agentId)`, `assay_chains()`, later `lending_position_safety(...)`. Each tool result is the report as structured content **plus** a short natural-language summary that always ends with the provenance line (`deployment … block …`). Share the tool definitions from `src/mcp/tools.ts` across two transports:
