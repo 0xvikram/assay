@@ -39,15 +39,16 @@ export default function Escalate({ mandateId, escalationId, newCap, why }: Props
   }
 
   if (!APP_ID || !RP_ID) {
-    return <p style={{ color: "#A9772A" }}>World ID is not configured on this deployment (NEXT_PUBLIC_WLD_APP_ID / NEXT_PUBLIC_WLD_RP_ID).</p>;
+    return <p style={{ color: "var(--gold)", fontSize: 14 }}>World ID is not configured on this deployment (NEXT_PUBLIC_WLD_APP_ID / NEXT_PUBLIC_WLD_RP_ID).</p>;
   }
 
   return (
-    <div style={{ marginTop: "1.5rem" }}>
-      <button onClick={() => void begin()} style={{ padding: "0.7rem 1.2rem", font: "inherit", fontWeight: 700, border: "1px solid #0F2226", borderRadius: 6, background: "#0F2226", color: "#EFEFEA", cursor: "pointer" }}>
-        I&apos;m here — approve with a Selfie Check
+    <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+      <button onClick={() => void begin()} className="btn" style={{ width: "100%", borderRadius: 999, display: "flex", alignItems: "center", justifyContent: "center", gap: 10 }}>
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><circle cx="12" cy="8" r="4" /><path d="M4 21a8 8 0 0 1 16 0" /></svg>
+        <span>I&apos;m here — approve with a Selfie Check</span>
       </button>
-      {status && <p style={{ opacity: 0.8 }}>{status}</p>}
+      {status && <p style={{ margin: 0, fontSize: 14, color: "var(--ink-2)" }}>{status}</p>}
       {rp && (
         <IDKitRequestWidget
           open={open}
@@ -63,8 +64,8 @@ export default function Escalate({ mandateId, escalationId, newCap, why }: Props
           environment={(process.env.NEXT_PUBLIC_WLD_ENVIRONMENT as "sandbox" | "staging" | "production" | undefined) ?? "sandbox"}
         />
       )}
-      <p style={{ fontSize: "0.85rem", opacity: 0.7, marginTop: "1rem" }}>
-        Reason given by the agent: <em>{why || "—"}</em>. Environment: {process.env.NEXT_PUBLIC_WLD_ENVIRONMENT ?? "sandbox"}.
+      <p className="mono" style={{ margin: 0, textAlign: "center", fontSize: 11, letterSpacing: "0.06em", color: "var(--ink-4)" }}>
+        World ID · {process.env.NEXT_PUBLIC_WLD_ENVIRONMENT ?? "sandbox"} · abuse prevention, not KYC
       </p>
     </div>
   );

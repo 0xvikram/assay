@@ -1,0 +1,84 @@
+:root {
+  --bg: #0a0a8c;
+  --bg-deep: #070770;
+  --ink: #ffffff;
+  --ink-2: #dcdcf6;
+  --ink-3: #c9c9f2;
+  --ink-4: #a9a9df;
+  --line: rgba(255, 255, 255, 0.14);
+  --glass: rgba(255, 255, 255, 0.06);
+  --glass-strong: rgba(255, 255, 255, 0.1);
+  --gold: #e8c36a;
+  --coral: #ffb4a8;
+  --mint: #8ce0b0;
+  --radius: 24px;
+  --radius-sm: 16px;
+}
+* { box-sizing: border-box; }
+html { color-scheme: dark; }
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--ink);
+  font-family: var(--font-archivo), "Helvetica Neue", Arial, sans-serif;
+  font-variation-settings: "wdth" 87.5;
+  -webkit-font-smoothing: antialiased;
+}
+a { color: inherit; text-decoration: none; transition: color 160ms ease, opacity 160ms ease; }
+a:hover { color: var(--gold); }
+.mono { font-family: var(--font-plex), "SFMono-Regular", Menlo, monospace; font-variation-settings: normal; }
+.serif { font-family: var(--font-newsreader), Georgia, "Times New Roman", serif; font-style: italic; font-weight: 300; }
+.dots {
+  background-color: var(--bg);
+  background-image: radial-gradient(circle, rgba(255, 255, 255, 0.32) 1px, rgba(255, 255, 255, 0) 1.6px);
+  background-size: 16px 16px;
+}
+.glass {
+  background: var(--glass);
+  border: 1px solid var(--line);
+  backdrop-filter: blur(16px) saturate(1.2);
+  -webkit-backdrop-filter: blur(16px) saturate(1.2);
+  border-radius: var(--radius);
+  transition: background 220ms ease, border-color 220ms ease, transform 220ms ease, box-shadow 220ms ease;
+}
+.glass:hover { background: var(--glass-strong); border-color: rgba(255, 255, 255, 0.22); }
+.glass-lift:hover { transform: translateY(-2px); box-shadow: 0 30px 70px rgba(0, 0, 60, 0.45); }
+.eyebrow { font-family: var(--font-plex), Menlo, monospace; font-size: 12px; letter-spacing: 0.18em; color: var(--ink-3); text-transform: uppercase; }
+.pill {
+  display: inline-flex; align-items: center; justify-content: center; gap: 10px;
+  padding: 12px 22px; border-radius: 999px; font-size: 15px; font-weight: 500;
+  border: 1px solid rgba(255, 255, 255, 0.4); color: var(--ink);
+  transition: background 180ms ease, color 180ms ease, border-color 180ms ease, transform 180ms ease;
+}
+.pill:hover { background: rgba(255, 255, 255, 0.1); color: var(--ink); border-color: rgba(255, 255, 255, 0.7); }
+.pill-solid { background: var(--ink); color: var(--bg); border-color: var(--ink); font-weight: 600; }
+.pill-solid:hover { background: #f2f2ff; color: var(--bg); transform: translateY(-1px); }
+.input {
+  width: 100%; padding: 16px 18px; border-radius: 18px; font: inherit; font-size: 16px;
+  background: rgba(255, 255, 255, 0.06); border: 1px solid var(--line); color: var(--ink); outline: none;
+  transition: border-color 180ms ease, background 180ms ease, box-shadow 180ms ease;
+}
+.input::placeholder { color: var(--ink-4); }
+.input:focus { border-color: rgba(255, 255, 255, 0.5); background: rgba(255, 255, 255, 0.09); box-shadow: 0 0 0 4px rgba(255, 255, 255, 0.06); }
+.btn {
+  padding: 16px 24px; border-radius: 18px; font: inherit; font-size: 16px; font-weight: 600; cursor: pointer;
+  background: var(--ink); color: var(--bg); border: 1px solid var(--ink);
+  transition: transform 160ms ease, background 160ms ease, opacity 160ms ease;
+}
+.btn:hover { transform: translateY(-1px); background: #f2f2ff; }
+.btn:disabled { opacity: 0.55; cursor: wait; transform: none; }
+.chip { font-family: var(--font-plex), Menlo, monospace; font-size: 13px; color: var(--ink-3); background: none; border: 1px solid var(--line); border-radius: 999px; padding: 6px 12px; cursor: pointer; transition: border-color 160ms ease, color 160ms ease; }
+.chip:hover { color: var(--ink); border-color: rgba(255, 255, 255, 0.4); }
+.fade-in { animation: fade 480ms ease both; }
+@keyframes fade { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+.h-display { font-weight: 300; letter-spacing: -0.03em; line-height: 1.02; text-wrap: balance; margin: 0; }
+.wordmark { display: inline-flex; align-items: center; gap: 12px; font-size: 17px; font-weight: 600; letter-spacing: 0.22em; }
+@media (max-width: 900px) {
+  .grid-2 { grid-template-columns: 1fr !important; }
+  .grid-3 { grid-template-columns: 1fr !important; }
+  .hero-h1 { font-size: 52px !important; }
+  .hero-serif { font-size: 56px !important; }
+  .hero-bottom { flex-direction: column !important; align-items: flex-start !important; }
+  .nav-links { display: none !important; }
+  .footer-mark { font-size: 160px !important; }
+}

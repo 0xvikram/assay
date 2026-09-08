@@ -9,16 +9,25 @@ export default async function EscalatePage({ searchParams }: { searchParams: Pro
   const newCap = q["cap"] ?? "";
   const why = q["why"] ?? "";
   return (
-    <main style={{ maxWidth: 640, margin: "0 auto", padding: "4rem 1.5rem", lineHeight: 1.5 }}>
-      <h1 style={{ fontSize: "1.5rem", margin: 0 }}>An agent wants a bigger envelope</h1>
-      <p style={{ opacity: 0.8, marginTop: "0.5rem" }}>
-        Mandate <code>{mandateId}</code> · escalation <code>{escalationId || "(none)"}</code> · requested cap <code>{newCap || "?"}</code>
-      </p>
-      <p>
-        Raising a spending cap is the one thing an agent must not do for itself. A live human approves it here with a
-        Selfie Check, and the approval is written to the same public ledger as every payment the agent makes.
-      </p>
-      {escalationId ? <Escalate mandateId={mandateId} escalationId={escalationId} newCap={newCap} why={why} /> : <p style={{ color: "#A9772A" }}>No escalation id in the URL.</p>}
+    <main style={{ position: "relative", minHeight: "100vh", backgroundColor: "var(--bg)", backgroundImage: "url(/temple-tall.jpg)", backgroundSize: "cover", backgroundPosition: "center top" }}>
+      <div style={{ position: "absolute", inset: 0, background: "linear-gradient(180deg, rgba(10,10,140,0.15) 0%, rgba(10,10,140,0.6) 40%, var(--bg) 72%)" }} />
+      <div className="fade-in" style={{ position: "relative", maxWidth: 520, margin: "0 auto", padding: "42vh 20px 40px", display: "flex", flexDirection: "column", gap: 16 }}>
+        <div className="eyebrow">Step-up · mandate {mandateId} · escalation {escalationId || "(none)"}</div>
+        <h1 className="h-display" style={{ fontSize: 40 }}>An agent wants <span className="serif" style={{ fontSize: 44 }}>a bigger envelope.</span></h1>
+        <p style={{ margin: 0, fontSize: 15, lineHeight: 1.5, fontWeight: 300, color: "var(--ink-2)" }}>
+          Raising a cap is the one thing an agent must not do for itself. A live human approves it here, and the approval is written to the same public ledger as every payment the agent makes.
+        </p>
+        <div className="glass" style={{ display: "flex", flexDirection: "column", gap: 8, padding: "14px 16px", borderRadius: 18, fontSize: 13, fontWeight: 300, color: "var(--ink-2)" }}>
+          <Row k="requested cap" v={newCap || "?"} />
+          <Row k="reason" v={why || "—"} />
+          <Row k="written to" v={process.env.HCS_TOPIC_ID ? `HCS ${process.env.HCS_TOPIC_ID}` : "HCS (unconfigured)"} />
+        </div>
+        {escalationId ? <Escalate mandateId={mandateId} escalationId={escalationId} newCap={newCap} why={why} /> : <p style={{ color: "var(--gold)" }}>No escalation id in the URL.</p>}
+      </div>
     </main>
   );
+}
+
+function Row({ k, v }: { k: string; v: string }) {
+  return <div style={{ display: "flex", justifyContent: "space-between", gap: 16 }}><span>{k}</span><span className="mono" style={{ color: "var(--ink)", textAlign: "right" }}>{v}</span></div>;
 }
