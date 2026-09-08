@@ -2,6 +2,7 @@ import { NextResponse, type NextRequest } from "next/server";
 import { HTTPFacilitatorClient, x402ResourceServer, type FacilitatorClient, type RouteConfig, type RoutesConfig } from "@x402/core/server";
 import { ExactHederaScheme } from "@x402/hedera/exact/server";
 import { BatchFacilitatorClient, GatewayEvmScheme } from "@circle-fin/x402-batching/server";
+import { ExactEvmScheme } from "@x402/evm/exact/server";
 import { withX402 } from "@x402/next";
 import { privateKeyToAccount } from "viem/accounts";
 import { submitReceipt } from "./hcs";
@@ -12,6 +13,9 @@ export const HBAR = "0.0.0";
 export const USDC_TESTNET = "0.0.429274";
 /** Arc testnet (Circle). USDC is the gas token; payments are batched by Circle Gateway. */
 export const ARC_NETWORK = "eip155:5042002";
+/** Base Sepolia through the x402.org facilitator — the rail Bazantic's gateway pays on. */
+export const BASE_SEPOLIA_NETWORK = "eip155:84532";
+export const X402_ORG_FACILITATOR_URL = process.env.X402_ORG_FACILITATOR_URL ?? "https://x402.org/facilitator";
 /** The SDK defaults to the mainnet Gateway, which does not list Arc testnet. */
 export const ARC_GATEWAY_URL = process.env.ARC_GATEWAY_URL ?? "https://gateway-api-testnet.circle.com";
 
@@ -91,9 +95,16 @@ export function resourceServer(): x402ResourceServer {
   // ResourceInfo.description optional where @x402/core 2.25 requires it — a
   // declaration drift, not a runtime one. Cast at this one boundary.
   const circle = new BatchFacilitatorClient({ url: ARC_GATEWAY_URL }) as unknown as FacilitatorClient;
-  server = new x402ResourceServer([new HTTPFacilitatorClient({ url: FACILITATOR_URL }), circle])
+  // Three rails, one engine: Blocky402 settles Hedera; Circle Gateway batches Arc;
+  // x402.org settles Base Sepolia, which is where Bazantic pays from.
+  server = new x402ResourceServer([
+    new HTTPFacilitatorClient({ url: FACILITATOR_URL }),
+    circle,
+    new HTTPFacilitatorClient({ url: X402_ORG_FACILITATOR_URL }),
+  ])
     .register("hedera:*", new ExactHederaScheme({ defaultAssets: { [NETWORK]: { asset: USDC_TESTNET, decimals: 6 } } }))
     .register(ARC_NETWORK, new GatewayEvmScheme())
+    .register(BASE_SEPOLIA_NETWORK, new ExactEvmScheme())
     .onAfterSettle(async (ctx) => {
       if (!ctx.result.success) return;
       const outcome = takeOutcome(ctx.paymentPayload);
@@ -138,7 +149,8 @@ export function paid(pattern: string, tier: Tier, handler: Handler): Handler {
   type Option = Extract<RouteConfig["accepts"], unknown[]>[number];
   const hedera: Option = { scheme: "exact", network: NETWORK, payTo, price: price(tier) };
   const arc: Option | null = seller ? { scheme: "exact", network: ARC_NETWORK, payTo: seller, price: TIERS[tier].usd } : null;
-  const accepts: Option[] = arc ? [hedera, arc] : [hedera];
+  const base: Option | null = seller ? { scheme: "exact", network: BASE_SEPOLIA_NETWORK, payTo: seller, price: TIERS[tier].usd } : null;
+  const accepts: Option[] = [hedera, ...(arc ? [arc] : []), ...(base ? [base] : [])];
   const routes: RoutesConfig = {
     [pattern]: {
       accepts,
