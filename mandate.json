@@ -1,0 +1,8 @@
+{
+  "$comment": "The envelope the reference agent operates inside. Amounts are tinybar (1 HBAR = 100000000).",
+  "maxPaymentAmount": "5000000",
+  "maxTotalAmount": "20000000",
+  "allowedVerdicts": ["VERIFIED", "UNPROVEN"],
+  "requireStepUpAbove": "50000000",
+  "expiresAt": "2026-09-30T00:00:00Z"
+}

@@ -2,6 +2,8 @@ import { wrapFetchWithPayment, decodePaymentResponseHeader } from "@x402/fetch";
 import { x402Client } from "@x402/core/client";
 import { createClientHederaSigner, PrivateKey } from "@x402/hedera";
 import { ExactHederaScheme } from "@x402/hedera/exact/client";
+import { decide, enforce, loadMandate, type Ledger } from "./mandate";
+import { writeReceipt } from "./receipt";
 
 /**
  * The reference paying agent. It does exactly one thing an agent about to pay
@@ -9,7 +11,11 @@ import { ExactHederaScheme } from "@x402/hedera/exact/client";
  * and nothing else — the facilitator submits and pays the network fee.
  */
 const BASE = process.env.PUBLIC_BASE_URL ?? "http://localhost:3000";
-const ref = process.argv[2] ?? "base:25975";
+const args = process.argv.slice(2);
+const ref = args.find((a) => !a.startsWith("--")) ?? "base:25975";
+const wantReceipt = args.includes("--receipt");
+/** What the agent intends to spend with this counterparty if the verdict allows it, in tinybar. */
+const intendedSpend = process.env.INTENDED_SPEND ?? "10000000";
 const [chain, agentId] = ref.split(":");
 const url = `${BASE}/api/v1/agents/${chain}/${agentId}`;
 
@@ -44,9 +50,12 @@ for (const a of required.accepts ?? []) {
 }
 
 console.log(`\n  ${b("2. sign a payment, retry")}  ${dim(`as ${accountId}`)}`);
+const mandate = loadMandate();
+const ledger: Ledger = { spent: 0n, payments: [] };
 const signer = createClientHederaSigner(accountId, PrivateKey.fromStringECDSA(key), { network: "hedera:testnet" });
-const client = new x402Client().register("hedera:*", new ExactHederaScheme(signer));
+const client = enforce(new x402Client().register("hedera:*", new ExactHederaScheme(signer)), mandate, ledger);
 const paidFetch = wrapFetchWithPayment(fetch, client);
+console.log(`     ${dim(`mandate: per-payment cap ${mandate.maxPaymentAmount}, run cap ${mandate.maxTotalAmount}, expires ${mandate.expiresAt}`)}`);
 
 const started = Date.now();
 const res = await paidFetch(url);
@@ -62,16 +71,51 @@ console.log(`     ${report.assessment.verdict}  ${dim(`confidence ${report.asses
 console.log(`     ${report.assessment.headline}`);
 console.log(`     ${dim(`deployment ${report.provenance.deployment} · block ${report.provenance.block}`)}`);
 
-const pr = res.headers.get("payment-response") ?? res.headers.get("PAYMENT-RESPONSE");
+const pr = res.headers.get("payment-response");
 console.log(`\n  ${b("4. settlement")}`);
+type Settlement = { success?: boolean; transaction?: string; network?: string; payer?: string };
+let settlement: Settlement | null = null;
 if (!pr) {
   console.log(`     ${dim("no PAYMENT-RESPONSE header — settlement is async on Hedera; check the service account on HashScan")}`);
 } else {
-  const s = decodePaymentResponseHeader(pr) as { success?: boolean; transaction?: string; network?: string; payer?: string };
-  console.log(`     success ${s.success}  network ${s.network}  payer ${s.payer ?? accountId}`);
-  if (s.transaction) {
-    console.log(`     tx ${s.transaction}`);
-    console.log(`     https://hashscan.io/testnet/transaction/${encodeURIComponent(s.transaction)}`);
+  settlement = decodePaymentResponseHeader(pr) as Settlement;
+  console.log(`     success ${settlement?.success}  network ${settlement?.network}  payer ${settlement?.payer ?? accountId}`);
+  if (settlement?.transaction) {
+    console.log(`     tx ${settlement.transaction}`);
+    console.log(`     https://hashscan.io/testnet/transaction/${encodeURIComponent(settlement.transaction)}`);
+  }
+}
+const paid = ledger.payments[0];
+console.log(`     ${dim(`paid ${paid?.amount ?? "?"} ${paid?.asset ?? ""} on ${paid?.network ?? ""} · run total ${ledger.spent}`)}`);
+
+// ---- the action trail: intent → evidence bought → decision → next action ----
+const decision = decide(mandate, report.assessment.verdict as never, intendedSpend);
+console.log(`\n  ${b("5. decision under the mandate")}`);
+console.log(`     intent      pay ${ref} up to ${intendedSpend} tinybar`);
+console.log(`     evidence    ${report.assessment.verdict} (${paid?.amount ?? "?"} ${paid?.asset ?? ""} · ${settlement?.transaction ?? "settling"})`);
+console.log(`     decision    ${b(decision.action.toUpperCase())} — ${decision.why}`);
+
+// ---- the receipt: the review that proves it was paid for -------------------
+if (wantReceipt) {
+  console.log(`\n  ${b("6. write the receipt")}`);
+  const assayId = process.env.ASSAY_AGENT_ID;
+  const payTo = process.env.HEDERA_SERVICE_ACCOUNT_ID ?? "";
+  if (!assayId) {
+    console.log(`     ${dim("ASSAY_AGENT_ID not set — run npm run register:self first")}`);
+  } else if (!settlement?.transaction) {
+    console.log(`     ${dim("no settlement transaction yet; nothing to prove")}`);
+  } else {
+    const r = await writeReceipt({
+      agentId: BigInt(assayId),
+      value: 100,
+      endpoint: url,
+      tool: "assay_agent",
+      text: `Paid ${paid?.amount} tinybar for a verdict on ${ref}: ${report.assessment.verdict}.`,
+      proof: { fromAddress: accountId, toAddress: payTo, chainId: "296", txHash: settlement.transaction },
+    });
+    console.log(`     feedback file ${r.feedbackURI}`);
+    console.log(`     giveFeedback  ${r.explorer}`);
+    console.log(`     ${dim(`now: npm run assay -- base-sepolia:${assayId}  → the review carries proofOfPaymentTxHash`)}`);
   }
 }
 console.log("");
