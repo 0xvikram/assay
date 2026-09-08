@@ -12,7 +12,7 @@ export default function Nav() {
   return (
     <nav className="nav wrap" style={{ width: "100%" }}>
       <Link href="/" className="wordmark"><Mark /><span>ASSAY</span></Link>
-      <div className="nav-links" style={{ display: "flex", gap: 32, fontSize: 15, color: "var(--ink-2)" }}>
+      <div className="nav-links">
         <Link href="/#console">Console</Link>
         <Link href="/#rails">Rails</Link>
         <Link href="/#receipt">Receipt</Link>

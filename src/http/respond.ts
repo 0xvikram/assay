@@ -7,23 +7,32 @@ import { NextResponse, type NextRequest } from "next/server";
  */
 const WINDOW_MS = 60_000;
 const FREE_PER_WINDOW = 10;
+/**
+ * The ledger is a cheap read of already-public mirror node data, and our own
+ * page polls it. Sharing the 10/min evidence budget meant a visitor who left
+ * the ledger open rate-limited themselves out of their own UI.
+ */
+const LEDGER_PER_WINDOW = 60;
 const hits = new Map<string, { n: number; start: number }>();
 
-export function tooManyFree(req: NextRequest): NextResponse | null {
+export function tooManyFree(req: NextRequest, budget = FREE_PER_WINDOW): NextResponse | null {
   const ip = req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ?? "local";
+  const key = `${ip}|${budget}`;
   const now = Date.now();
-  const h = hits.get(ip);
+  const h = hits.get(key);
   if (!h || now - h.start > WINDOW_MS) {
-    hits.set(ip, { n: 1, start: now });
+    hits.set(key, { n: 1, start: now });
     return null;
   }
   h.n++;
-  if (h.n <= FREE_PER_WINDOW) return null;
+  if (h.n <= budget) return null;
   return NextResponse.json(
-    { error: "rate_limited", detail: `${FREE_PER_WINDOW} free requests per minute per IP. The paid routes have no such limit.` },
+    { error: "rate_limited", detail: `${budget} free requests per minute per IP. The paid routes have no such limit.` },
     { status: 429, headers: { "Retry-After": String(Math.ceil((WINDOW_MS - (now - h.start)) / 1000)) } },
   );
 }
+
+export { LEDGER_PER_WINDOW };
 
 /** One JSON line per request so hosted logs stay greppable in the hour they exist. */
 export function logRequest(route: string, req: NextRequest, status: number, startedAt: number, extra: Record<string, unknown> = {}) {

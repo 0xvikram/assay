@@ -1,6 +1,6 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { readMessages } from "@/src/hcs";
-import { tooManyFree } from "@/src/http/respond";
+import { tooManyFree, LEDGER_PER_WINDOW } from "@/src/http/respond";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -10,7 +10,7 @@ export const dynamic = "force-dynamic";
  * node. Free, because it is public information about payments already made.
  */
 export async function GET(req: NextRequest) {
-  const limited = tooManyFree(req);
+  const limited = tooManyFree(req, LEDGER_PER_WINDOW);
   if (limited) return limited;
   const topic = process.env.HCS_TOPIC_ID ?? null;
   if (!topic) return NextResponse.json({ topic: null, entries: [] });

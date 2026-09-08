@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 type Entry =
   | { kind: "receipt"; seq: number; at: string; messageUrl: string; route: string; ref: string; verdict: string; payer: string | null; amount: string | null; asset: string | null; network: string; settlementTxId: string | null; settlementUrl: string | null }
@@ -14,56 +14,101 @@ function amountLabel(e: Extract<Entry, { kind: "receipt" }>) {
   return "";
 }
 
+const when = (at: string) => new Date(at).toLocaleString(undefined, { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" });
+
 /**
  * Every paid call and every human approval, read from Hedera Consensus
  * Service through the public mirror node — no database behind this list.
+ *
+ * The free routes are rate limited, and this component used to poll straight
+ * through a 429 and print the raw error, so a couple of reloads left the page
+ * looking broken. It now backs off and says what is actually happening.
  */
 export default function Trail({ limit = 8, compact = false }: { limit?: number; compact?: boolean }) {
   const [data, setData] = useState<{ topic: string | null; topicUrl?: string; entries: Entry[] } | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [waiting, setWaiting] = useState(0);
+  const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     let alive = true;
-    const load = () => fetch(`/api/v1/trail?limit=${limit}`).then(async (r) => { if (!r.ok) throw new Error((await r.json()).error ?? `HTTP ${r.status}`); return r.json(); })
-      .then((d) => { if (alive) { setData(d); setError(null); } })
-      .catch((e) => { if (alive) setError((e as Error).message); });
+    const schedule = (ms: number) => { if (alive) timer.current = setTimeout(load, ms); };
+
+    async function load() {
+      try {
+        const r = await fetch(`/api/v1/trail?limit=${limit}`);
+        if (r.status === 429) {
+          const retry = Math.max(10, Number(r.headers.get("Retry-After") ?? 30));
+          if (!alive) return;
+          setWaiting(retry);
+          schedule(retry * 1000);
+          return;
+        }
+        if (!r.ok) throw new Error((await r.json().catch(() => ({}))).error ?? `HTTP ${r.status}`);
+        const d = await r.json();
+        if (!alive) return;
+        setData(d); setError(null); setWaiting(0);
+        schedule(30_000);
+      } catch (e) {
+        if (!alive) return;
+        setError((e as Error).message);
+        schedule(60_000);
+      }
+    }
+
     void load();
-    const t = setInterval(load, 20_000);
-    return () => { alive = false; clearInterval(t); };
+    return () => { alive = false; if (timer.current) clearTimeout(timer.current); };
   }, [limit]);
 
-  if (error) return <div style={{ color: "var(--coral)", fontSize: 14 }}>ledger unreachable: {error}</div>;
-  if (!data) return <div className="mono" style={{ fontSize: 12, color: "var(--ink-4)" }}>reading the mirror node…</div>;
-  if (!data.topic) return <div className="mono" style={{ fontSize: 12, color: "var(--ink-4)" }}>no receipt topic configured on this deployment</div>;
+  const note = (text: string, color = "var(--ink-4)") => <div className="mono" style={{ fontSize: 12, color }}>{text}</div>;
+
+  if (waiting && !data) return note(`the free ledger read is rate limited — retrying in ${waiting}s`, "var(--gold)");
+  if (error && !data) return note(`ledger unreachable: ${error}`, "var(--coral)");
+  if (!data) return note("reading the mirror node…");
+  if (!data.topic) return note("no receipt topic configured on this deployment");
+  if (!data.entries.length) return note("no receipts on this topic yet");
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+    <div className="trail-list">
       {data.entries.map((e) => (
-        <a key={e.seq} href={e.kind === "receipt" && e.settlementUrl ? e.settlementUrl : e.messageUrl} target="_blank" rel="noreferrer" className="glass" style={{ display: "grid", gridTemplateColumns: compact ? "56px minmax(0, 1fr) auto" : "56px 120px minmax(0, 1fr) auto auto", gap: 16, alignItems: "center", padding: "14px 18px", borderRadius: 16, color: "inherit" }}>
-          <span className="mono" style={{ fontSize: 12, color: "var(--ink-4)" }}>#{e.seq}</span>
-          {!compact && <span className="mono" style={{ fontSize: 12, color: "var(--ink-3)" }}>{new Date(e.at).toLocaleString(undefined, { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" })}</span>}
+        <a
+          key={e.seq}
+          href={e.kind === "receipt" && e.settlementUrl ? e.settlementUrl : e.messageUrl}
+          target="_blank"
+          rel="noreferrer"
+          className={`glass trail-row${compact ? " trail-row--compact" : ""}`}
+        >
+          <span className="mono trail-seq">#{e.seq}</span>
+          <span className="mono trail-when">{when(e.at)}</span>
           {e.kind === "receipt" ? (
             <>
-              <span style={{ display: "flex", flexDirection: "column", gap: 2, minWidth: 0 }}>
-                <span style={{ fontSize: 14 }}>
+              <span className="trail-main">
+                <span>
                   <span style={{ color: VERDICT[e.verdict] ?? "var(--ink)" }}>{e.verdict || "—"}</span>
                   <span style={{ color: "var(--ink-3)" }}> · {e.ref || e.route}</span>
                 </span>
-                <span className="mono" style={{ fontSize: 11, color: "var(--ink-4)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>paid by {e.payer ?? "—"}{e.settlementTxId ? ` · ${e.settlementTxId}` : ""}</span>
+                <span className="mono trail-sub">paid by {e.payer ?? "—"}{e.settlementTxId ? ` · ${e.settlementTxId}` : ""}</span>
               </span>
-              <span className="mono" style={{ fontSize: 12, color: "var(--ink-3)" }}>{RAIL[e.network] ?? e.network}</span>
-              <span className="mono" style={{ fontSize: 13, color: "var(--gold)", textAlign: "right" }}>{amountLabel(e)}</span>
+              <span className="mono trail-rail">{RAIL[e.network] ?? e.network}</span>
+              <span className="mono trail-amt">{amountLabel(e)}</span>
             </>
           ) : (
             <>
-              <span style={{ fontSize: 14 }}>human approval <span style={{ color: "var(--ink-3)" }}>· escalation {e.escalationId} → cap {e.newCap}</span></span>
-              <span className="mono" style={{ fontSize: 12, color: "var(--ink-3)" }}>World ID</span>
-              <span className="mono" style={{ fontSize: 12, color: "var(--mint)", textAlign: "right" }}>{e.credential}</span>
+              <span className="trail-main">
+                <span>human approval</span>
+                <span className="trail-sub">escalation {e.escalationId} → cap {e.newCap}</span>
+              </span>
+              <span className="mono trail-rail">World ID</span>
+              <span className="mono trail-amt" style={{ color: "var(--mint)" }}>{e.credential}</span>
             </>
           )}
         </a>
       ))}
-      {data.topicUrl && <a href={data.topicUrl} target="_blank" rel="noreferrer" className="mono" style={{ fontSize: 12, color: "var(--ink-3)", alignSelf: "flex-end" }}>topic {data.topic} on HashScan ↗</a>}
+      {data.topicUrl && (
+        <a href={data.topicUrl} target="_blank" rel="noreferrer" className="mono" style={{ fontSize: 12, color: "var(--ink-3)", alignSelf: "flex-end" }}>
+          topic {data.topic} on HashScan ↗
+        </a>
+      )}
     </div>
   );
 }
