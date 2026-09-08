@@ -29,7 +29,7 @@ Nanopayments), exposed as REST + MCP. See `docs/PLAN.md` §0 and §2.
 
 ## Stack
 Node 24 · TypeScript strict (`verbatimModuleSyntax`, `noUncheckedIndexedAccess`) · ESM ·
-`tsx` for the CLI · **Next.js 15 App Router at the repo root is the only server** — UI, paid API and
+`tsx` for the CLI · **Next.js 16 App Router at the repo root is the only server** — UI, paid API and
 MCP on one origin, deployed to **Vercel Hobby** · `@x402/next` + `@x402/mcp` for gating ·
 `node:test` for tests · no ORM, no database.
 

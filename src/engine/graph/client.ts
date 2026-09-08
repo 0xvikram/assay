@@ -1,6 +1,6 @@
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
-import type { ChainEntry } from "./registry.js";
+import type { ChainEntry } from "./registry";
 
 function loadKey(): string {
   if (process.env.GRAPH_API_KEY) return process.env.GRAPH_API_KEY;
@@ -13,7 +13,9 @@ function loadKey(): string {
   throw new Error("GRAPH_API_KEY is not set. Copy .env.example to .env and add your gateway key.");
 }
 
-const KEY = loadKey();
+// Resolved on first use, not at import: a build step or a test may load this
+// module without ever touching the gateway.
+let KEY: string | null = null;
 
 export interface GraphMeta {
   deployment: string;
@@ -45,6 +47,7 @@ export async function query<T>(
   declarations = "$id: ID!, $first: Int",
   attempt = 0,
 ): Promise<GraphResult<T>> {
+  KEY ??= loadKey();
   const url = `https://gateway.thegraph.com/api/${KEY}/subgraphs/id/${chain.subgraphId}`;
   const gql = `query Assay(${declarations}) { ${META_FRAGMENT} ${body} }`;
   const started = Date.now();

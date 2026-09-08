@@ -1,7 +1,7 @@
-import { assay, resolveChain, type AssayReport } from "./assay.js";
-import { healthyChains } from "./graph/registry.js";
-import { fetchAgentsByOwner, type AgentStub } from "./graph/queries.js";
-import type { Finding, Verdict } from "./score/verdict.js";
+import { assay, resolveChain, type AssayReport } from "./assay";
+import { healthyChains } from "./graph/registry";
+import { fetchAgentsByOwner, type AgentStub } from "./graph/queries";
+import type { Finding, Verdict } from "./score/verdict";
 
 export interface ChainPresence {
   chain: string;

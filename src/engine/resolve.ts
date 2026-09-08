@@ -1,5 +1,5 @@
-import { healthyChains, type ChainEntry } from "./graph/registry.js";
-import { fetchAgentsByEndpoint, type AgentStub } from "./graph/queries.js";
+import { healthyChains, type ChainEntry } from "./graph/registry";
+import { fetchAgentsByEndpoint, type AgentStub } from "./graph/queries";
 
 export type EndpointField = "mcpEndpoint" | "webEndpoint" | "a2aEndpoint";
 

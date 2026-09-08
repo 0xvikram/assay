@@ -1,6 +1,6 @@
-import { query } from "./client.js";
-import type { ChainEntry } from "./registry.js";
-import type { GraphResult } from "./client.js";
+import { query } from "./client";
+import type { ChainEntry } from "./registry";
+import type { GraphResult } from "./client";
 
 export interface RawFeedback {
   id: string;

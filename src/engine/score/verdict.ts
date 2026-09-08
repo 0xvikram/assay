@@ -1,4 +1,4 @@
-import type { Signals } from "./signals.js";
+import type { Signals } from "./signals";
 
 export type Verdict = "VERIFIED" | "UNPROVEN" | "WASH_REPUTATION_DETECTED";
 

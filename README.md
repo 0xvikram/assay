@@ -74,3 +74,30 @@ if its paid reviews stand on their own.
 
 `fixtures/` holds pinned snapshots (block number in the filename) so the demo
 survives the farm going quiet. A replay always announces itself as a fixture.
+
+## Run the service
+
+```
+npm run build && npm start          # Next.js 16, all routes under /api
+curl localhost:3000/api/healthz
+curl localhost:3000/api/v1/preview/base/25975
+```
+
+| Route | What |
+|---|---|
+| `GET /api/v1/agents/{chain}/{agentId}` | full report: verdict, findings, next steps, signals, provenance |
+| `GET /api/v1/preview/{chain}/{agentId}` | verdict + confidence only — the free tier |
+| `GET /api/v1/resolve?url=` | which registered agents claim this endpoint |
+| `GET /api/v1/corroborate/{owner or chain:agentId}` | the same owner across every healthy chain |
+| `GET /api/v1/chains` · `GET /api/healthz` · `GET /api/openapi` | registry · liveness · OpenAPI 3.1 |
+
+Free routes allow 10 requests a minute per IP. Every route declares `runtime = "nodejs"`
+and `maxDuration = 60`; the engine fans out to chains in parallel, never in a loop.
+
+### Deploy (Vercel Hobby)
+
+1. `vercel.com/new` → import `0xvikram/assay` from your **personal** GitHub account
+   (Hobby cannot link organisation repos). Framework is detected as Next.js; no settings to change.
+2. Environment variables: `GRAPH_API_KEY` (required), `PUBLIC_BASE_URL` (the deployment URL,
+   used as the `servers` entry in `/api/openapi`).
+3. Deploy. Every push to `master` redeploys.

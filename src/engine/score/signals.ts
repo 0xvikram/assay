@@ -1,4 +1,4 @@
-import type { RawAgent, RawFeedback } from "../graph/queries.js";
+import type { RawAgent, RawFeedback } from "../graph/queries";
 
 export interface Signals {
   /** Non-revoked feedback entries actually examined. */

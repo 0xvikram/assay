@@ -1,7 +1,7 @@
 import { readFileSync } from "node:fs";
-import { assay, type AssayReport } from "./engine/assay.js";
-import { resolveEndpoint } from "./engine/resolve.js";
-import { corroborate } from "./engine/corroborate.js";
+import { assay, type AssayReport } from "./engine/assay";
+import { resolveEndpoint } from "./engine/resolve";
+import { corroborate } from "./engine/corroborate";
 
 const C = {
   dim: (s: string) => `\x1b[2m${s}\x1b[0m`,

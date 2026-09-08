@@ -1,7 +1,7 @@
-import { fetchAgent } from "./graph/queries.js";
-import { computeSignals, type Signals } from "./score/signals.js";
-import { assess, type Assessment, THRESHOLDS } from "./score/verdict.js";
-import { byChainId, byKey, type ChainEntry } from "./graph/registry.js";
+import { fetchAgent } from "./graph/queries";
+import { computeSignals, type Signals } from "./score/signals";
+import { assess, type Assessment, THRESHOLDS } from "./score/verdict";
+import { byChainId, byKey, type ChainEntry } from "./graph/registry";
 
 export interface Provenance {
   chain: string;

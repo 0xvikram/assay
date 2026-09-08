@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { endpointCandidates } from "./resolve.js";
+import { endpointCandidates } from "./resolve";
 
 test("candidates cover case and trailing-slash variants without duplicates", () => {
   const c = endpointCandidates("  HTTPS://MCP.Zyf.ai/ ");

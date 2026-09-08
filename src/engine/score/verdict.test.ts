@@ -1,8 +1,8 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import type { RawAgent, RawFeedback } from "../graph/queries.js";
-import { computeSignals } from "./signals.js";
-import { assess, THRESHOLDS } from "./verdict.js";
+import type { RawAgent, RawFeedback } from "../graph/queries";
+import { computeSignals } from "./signals";
+import { assess, THRESHOLDS } from "./verdict";
 
 const OWNER = "0x1111111111111111111111111111111111111111";
 const T0 = 1_750_000_000;

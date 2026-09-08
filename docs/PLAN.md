@@ -50,7 +50,7 @@ Everything here was checked Sept 6 and re-verified Sept 8. If any of it drifts, 
 |---|---|---|
 | `@x402/next` `@x402/core` `@x402/hedera` `@x402/fetch` | 2.25.0 | x402 route gate + client, Hedera scheme |
 | `@x402/mcp` | 2.25.0 | **paid MCP tools** — `createPaymentWrapper`, `x402ResourceServer` |
-| `next` `react` | 15.x / 19.x | the single deployable (UI + API + MCP on one origin) |
+| `next` `react` | 16.3.4 / 19.2.8 | the single deployable (UI + API + MCP on one origin) |
 | `@hiero-ledger/sdk` | latest | Hedera signing, HCS receipts |
 | `@modelcontextprotocol/sdk` | 1.30.0 | MCP server (stdio + Streamable HTTP) |
 | `@circle-fin/x402-batching` | 3.4.0 | Arc Nanopayments seller + buyer |
@@ -344,7 +344,7 @@ Paste each *Opus brief* into Claude Code from the repo root. Each brief assumes 
 ### Phase B — Next.js app + Vercel deploy (Sep 9)
 
 **Opus brief**
-> Add Next.js 15 (App Router, TypeScript) **in this repo, at the root** — one deployable, per §2. `npx create-next-app` into a temp dir and merge, or hand-write `app/` and add `next react react-dom`; do not create a `web/` subfolder and do not touch `src/engine`, which stays framework-free and importable from route handlers via the `@/` alias.
+> Add Next.js 16 (App Router, TypeScript) **in this repo, at the root** — one deployable, per §2. `npx create-next-app` into a temp dir and merge, or hand-write `app/` and add `next react react-dom`; do not create a `web/` subfolder and do not touch `src/engine`, which stays framework-free and importable from route handlers via the `@/` alias.
 > Route handlers, all JSON, all returning the full `AssayReport`, every one declaring `export const runtime = "nodejs"` and `export const maxDuration = 60`:
 > `GET /api/v1/agents/[chain]/[agentId]`, `GET /api/v1/corroborate/[chain]/[agentId]`, `GET /api/v1/resolve?url=`, `GET /api/v1/chains`, `GET /api/healthz`, and `GET /api/v1/preview/[chain]/[agentId]` returning only `{verdict, confidence}` — the free tier.
 > `GET /api/openapi` serves a hand-written OpenAPI **3.1** document from `src/openapi.ts` (Bazantic requires 3.1: include `servers`, per-route `summary`, `parameters`, a `Report` schema). Structured request logging; a 10 req/min per-IP limit on free routes only.
