@@ -14,6 +14,7 @@ const BASE = process.env.PUBLIC_BASE_URL ?? "http://localhost:3000";
 const args = process.argv.slice(2);
 const ref = args.find((a) => !a.startsWith("--")) ?? "base:25975";
 const wantReceipt = args.includes("--receipt");
+const waitForHuman = args.includes("--wait");
 /** What the agent intends to spend with this counterparty if the verdict allows it, in tinybar. */
 const intendedSpend = process.env.INTENDED_SPEND ?? "10000000";
 const [chain, agentId] = ref.split(":");
@@ -94,6 +95,33 @@ console.log(`\n  ${b("5. decision under the mandate")}`);
 console.log(`     intent      pay ${ref} up to ${intendedSpend} tinybar`);
 console.log(`     evidence    ${report.assessment.verdict} (${paid?.amount ?? "?"} ${paid?.asset ?? ""} · ${settlement?.transaction ?? "settling"})`);
 console.log(`     decision    ${b(decision.action.toUpperCase())} — ${decision.why}`);
+
+// ---- step-up: the one thing the agent must not do for itself ---------------
+if (decision.action === "step-up") {
+  const mandateId = process.env.MANDATE_ID ?? "default";
+  const escalationId = crypto.randomUUID().slice(0, 8);
+  const url = `${BASE}/escalate?mandate=${mandateId}&id=${escalationId}&cap=${intendedSpend}&why=${encodeURIComponent(`${ref} is ${report.assessment.verdict}; spend ${intendedSpend} exceeds ${mandate.requireStepUpAbove}`)}`;
+  console.log(`\n  ${b("5a. a human must approve")}`);
+  console.log(`     open on a phone:  ${url}`);
+  console.log(`     ${dim(`polling ${BASE}/api/v1/mandate/${mandateId}/approvals for escalation ${escalationId}${waitForHuman ? "" : " (pass --wait to block)"}`)}`);
+  if (waitForHuman) {
+    const deadline = Date.now() + 10 * 60_000;
+    let approved = false;
+    while (Date.now() < deadline && !approved) {
+      await new Promise((r) => setTimeout(r, 5_000));
+      const a = await fetch(`${BASE}/api/v1/mandate/${mandateId}/approvals`).then((r) => r.json()).catch(() => null) as { approvals?: { escalationId: string; newCap: string; nullifier: string; seq: number }[] } | null;
+      const hit = a?.approvals?.find((x) => x.escalationId === escalationId);
+      if (hit) {
+        approved = true;
+        console.log(`     ${b("approved")} on HCS seq ${hit.seq} — cap ${hit.newCap}, nullifier ${hit.nullifier.slice(0, 10)}…`);
+        console.log(`     decision    ${b("PROCEED")} — a live human raised the envelope`);
+      } else {
+        process.stdout.write(dim("."));
+      }
+    }
+    if (!approved) console.log(`\n     ${dim("no approval within 10 minutes — staying refused")}`);
+  }
+}
 
 // ---- the receipt: the review that proves it was paid for -------------------
 if (wantReceipt) {

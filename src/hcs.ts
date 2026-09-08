@@ -44,15 +44,25 @@ export async function createTopic(memo = "assay receipts"): Promise<string> {
   }
 }
 
-/**
- * Best effort by design: a receipt that fails to write must never fail the
- * paid response the customer already settled for. Returns the sequence number
- * or null, and says why in the log.
- */
-export async function submitReceipt(receipt: Receipt): Promise<number | null> {
+/** A human said yes to a bigger envelope, and proved they were there to say it. */
+export interface Approval {
+  type: "assay.approval.v1";
+  mandateId: string;
+  escalationId: string;
+  newCap: string;
+  /** World ID nullifier — the only anti-replay key; safe to store, reveals nothing. */
+  nullifier: string;
+  credential: string;
+  ts: string;
+}
+
+export type TopicMessage = Receipt | Approval;
+
+/** Every message on the topic goes through here; the type field says what it is. */
+export async function submitMessage(msg: TopicMessage): Promise<number | null> {
   const topic = process.env.HCS_TOPIC_ID;
   if (!topic) {
-    console.warn(JSON.stringify({ t: receipt.ts, hcs: "skipped", reason: "HCS_TOPIC_ID not set" }));
+    console.warn(JSON.stringify({ t: msg.ts, hcs: "skipped", type: msg.type, reason: "HCS_TOPIC_ID not set" }));
     return null;
   }
   let client: Client | null = null;
@@ -60,22 +70,28 @@ export async function submitReceipt(receipt: Receipt): Promise<number | null> {
     client = operator();
     const res = await new TopicMessageSubmitTransaction()
       .setTopicId(TopicId.fromString(topic))
-      .setMessage(JSON.stringify(receipt))
+      .setMessage(JSON.stringify(msg))
       .execute(client);
     const r = await res.getReceipt(client);
     const seq = r.topicSequenceNumber ? Number(r.topicSequenceNumber.toString()) : null;
-    console.log(JSON.stringify({ t: receipt.ts, hcs: "written", topic, seq, route: receipt.route, ref: receipt.ref }));
+    console.log(JSON.stringify({ t: msg.ts, hcs: "written", topic, seq, type: msg.type }));
     return seq;
   } catch (err) {
-    console.warn(JSON.stringify({ t: receipt.ts, hcs: "failed", topic, error: (err as Error).message }));
+    console.warn(JSON.stringify({ t: msg.ts, hcs: "failed", topic, type: msg.type, error: (err as Error).message }));
     return null;
   } finally {
     client?.close();
   }
 }
 
+/**
+ * Best effort by design: a receipt that fails to write must never fail the
+ * paid response the customer already settled for.
+ */
+export const submitReceipt = (receipt: Receipt) => submitMessage(receipt);
+
 /** Read the trail back the way anyone else can: from the mirror node, no key. */
-export async function readReceipts(limit = 100): Promise<{ seq: number; consensusAt: string; receipt: Receipt | null }[]> {
+export async function readMessages(limit = 100): Promise<{ seq: number; consensusAt: string; message: TopicMessage | null }[]> {
   const topic = process.env.HCS_TOPIC_ID;
   if (!topic) return [];
   const res = await fetch(`${MIRROR}/api/v1/topics/${topic}/messages?limit=${limit}&order=desc`, {
@@ -84,8 +100,16 @@ export async function readReceipts(limit = 100): Promise<{ seq: number; consensu
   if (!res.ok) throw new Error(`mirror node HTTP ${res.status}`);
   const json = (await res.json()) as { messages: { sequence_number: number; consensus_timestamp: string; message: string }[] };
   return json.messages.map((m) => {
-    let receipt: Receipt | null = null;
-    try { receipt = JSON.parse(Buffer.from(m.message, "base64").toString("utf8")) as Receipt; } catch { /* foreign message on our topic */ }
-    return { seq: m.sequence_number, consensusAt: m.consensus_timestamp, receipt };
+    let message: TopicMessage | null = null;
+    try { message = JSON.parse(Buffer.from(m.message, "base64").toString("utf8")) as TopicMessage; } catch { /* foreign message on our topic */ }
+    return { seq: m.sequence_number, consensusAt: m.consensus_timestamp, message };
   });
+}
+
+export async function readApprovals(mandateId?: string, limit = 100): Promise<(Approval & { seq: number; consensusAt: string })[]> {
+  const all = await readMessages(limit);
+  return all
+    .filter((m): m is { seq: number; consensusAt: string; message: Approval } => m.message?.type === "assay.approval.v1")
+    .map((m) => ({ ...m.message, seq: m.seq, consensusAt: m.consensusAt }))
+    .filter((a) => !mandateId || a.mandateId === mandateId);
 }
