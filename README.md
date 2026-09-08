@@ -101,3 +101,11 @@ and `maxDuration = 60`; the engine fans out to chains in parallel, never in a lo
 2. Environment variables: `GRAPH_API_KEY` (required), `PUBLIC_BASE_URL` (the deployment URL,
    used as the `servers` entry in `/api/openapi`).
 3. Deploy. Every push to `master` redeploys.
+
+## Use from Claude / Cursor (MCP)
+
+```
+npm run mcp                       # stdio server, free, runs on your GRAPH_API_KEY
+```
+Hosted: point any MCP client at `https://<host>/api/mcp` — `assay_agent` costs HBAR over
+x402, `assay_preview` is free. Config snippets and a paying client in [docs/MCP.md](docs/MCP.md).
