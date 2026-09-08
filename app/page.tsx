@@ -9,11 +9,11 @@ export default function Home() {
         <Nav />
         <div className="hero-bottom fade-in" style={{ position: "absolute", left: 48, right: 48, bottom: 64, display: "flex", alignItems: "flex-end", justifyContent: "space-between", gap: 48 }}>
           <div style={{ display: "flex", flexDirection: "column", gap: 22, maxWidth: 900 }}>
-            <div className="eyebrow">ERC-8004 · read live from The Graph · sold over x402</div>
-            <h1 className="h-display hero-h1" style={{ fontSize: 92, fontWeight: 400, letterSpacing: "-0.035em", lineHeight: 0.98 }}>
+            <div className="eyebrow on-image" style={{ color: "var(--ink)" }}>ERC-8004 · read live from The Graph · sold over x402</div>
+            <h1 className="h-display hero-h1 on-image" style={{ fontSize: 92, fontWeight: 400, letterSpacing: "-0.035em", lineHeight: 0.98 }}>
               Know who you&apos;re paying <span className="serif hero-serif" style={{ fontSize: 100 }}>before</span> you pay them.
             </h1>
-            <p style={{ margin: 0, maxWidth: 560, fontSize: 18, lineHeight: 1.5, fontWeight: 300, color: "var(--ink-2)" }}>
+            <p className="on-image" style={{ margin: 0, maxWidth: 560, fontSize: 18, lineHeight: 1.5, fontWeight: 300, color: "var(--ink-2)" }}>
               Assay reads an agent&apos;s reputation as it stands on-chain, tells you whether it&apos;s real, and refuses to guess.
             </p>
           </div>
