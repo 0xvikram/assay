@@ -75,11 +75,11 @@
 
   <!-- next -->
   <rect x="800" y="430" width="476" height="150" rx="8" fill="none" stroke="#0F2226" stroke-dasharray="5 4"/>
-  <text x="816" y="454" font-weight="700" fill="#0F2226" opacity=".8">next</text>
-  <text x="816" y="476" fill="#0F2226" font-size="11" opacity=".8">Arc Nanopayments — second rail, /api/arc/v1/*</text>
-  <text x="816" y="494" fill="#0F2226" font-size="11" opacity=".8">Privy treasury — policy + key quorum, the mandate's other half</text>
-  <text x="816" y="512" fill="#0F2226" font-size="11" opacity=".8">World Selfie Check — step-up to raise the cap</text>
-  <text x="816" y="530" fill="#0F2226" font-size="11" opacity=".8">Bazantic gateway over /api/openapi · Uniswap quote</text>
+  <text x="816" y="454" font-weight="700" fill="#0F2226" opacity=".8">also live</text>
+  <text x="816" y="476" fill="#0F2226" font-size="11" opacity=".8">Arc — second rail via Circle Gateway (paid)</text>
+  <text x="816" y="494" fill="#0F2226" font-size="11" opacity=".8">Privy treasury — policy + key quorum (refusal live)</text>
+  <text x="816" y="512" fill="#0F2226" font-size="11" opacity=".8">World Selfie Check — /escalate (sandbox pending)</text>
+  <text x="816" y="530" fill="#0F2226" font-size="11" opacity=".8">Base Sepolia rail via x402.org · Bazantic gateways · Uniswap quote</text>
 
   <!-- flows -->
   <path d="M234 143H320" fill="none" stroke="#A9772A" stroke-width="2" marker-end="url(#b)"/>

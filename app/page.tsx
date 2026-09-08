@@ -39,6 +39,20 @@ export default function Home() {
         </div>
       </section>
 
+      <section id="verdicts" className="dots section-tight">
+        <div className="wrap" style={{ display: "flex", flexDirection: "column", gap: 24 }}>
+          <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+            <div className="eyebrow">Three verdicts</div>
+            <h2 className="h-display t-h2">Confidence is earned only from <span className="serif">payment-backed, independent</span> reviews.</h2>
+          </div>
+          <div className="grid-rails">
+            <Verdict color="var(--mint)" name="VERIFIED" body="At least five reviews backed by verifiable on-chain payments, from at least three independent payers, none of them dominant. Confidence grows with depth and spread." />
+            <Verdict color="var(--gold)" name="UNPROVEN" body="Reputation exists but nothing about it can be independently verified — or there is too little of it to judge. Not a punishment: every report ends with the priced path to VERIFIED." />
+            <Verdict color="var(--coral)" name="WASH_REPUTATION_DETECTED" body="The signal was manufactured: one address wrote most of it, every score is identical and unpaid, it all landed in one day, or the agent reviewed itself. Payment-backed evidence can still outrank it." />
+          </div>
+        </div>
+      </section>
+
       <section id="rails" className="dots section-tight">
         <div className="wrap">
           <div style={{ display: "flex", alignItems: "flex-end", justifyContent: "space-between", gap: 32, marginBottom: 32, flexWrap: "wrap" }}>
@@ -123,6 +137,15 @@ function Stat({ n, k }: { n: string; k: string }) {
     <div>
       <div style={{ fontSize: "clamp(24px, 2.4vw, 32px)", fontWeight: 400, letterSpacing: "-0.02em" }}>{n}</div>
       <div className="eyebrow" style={{ fontSize: 11, letterSpacing: "0.12em" }}>{k}</div>
+    </div>
+  );
+}
+
+function Verdict({ color, name, body }: { color: string; name: string; body: string }) {
+  return (
+    <div className="glass glass-lift" style={{ display: "flex", flexDirection: "column", gap: 12, padding: "clamp(20px, 2vw, 28px)" }}>
+      <div style={{ fontSize: 20, fontWeight: 500, letterSpacing: "-0.02em", color, wordBreak: "break-word" }}>{name}</div>
+      <div style={{ fontSize: 14, lineHeight: 1.55, fontWeight: 300, color: "var(--ink-2)" }}>{body}</div>
     </div>
   );
 }

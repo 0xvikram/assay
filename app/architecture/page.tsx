@@ -17,8 +17,8 @@ export default function Architecture() {
       <p style={{ color: "var(--ink-2)", fontWeight: 300, marginTop: "0.5rem" }}>
         One engine, two doors, one ledger. Brass is money moving; ink is data moving; dotted is verify / settle.
       </p>
-      <div className="glass" style={{ overflowX: "auto", marginTop: "1.5rem", padding: 8, background: "#EFEFEA" }}>
-        <img src="/architecture.svg" alt="Assay architecture: paying agent → Assay (REST + MCP over one engine) → The Graph; Blocky402 verify/settle → HCS receipts; the receipt written to the ERC-8004 Reputation Registry on Base Sepolia with the file on IPFS" style={{ display: "block", minWidth: 900, width: "100%" }} />
+      <div className="glass" style={{ overflowX: "auto", marginTop: "1.5rem", padding: 8 }}>
+        <img src="/architecture-dark.svg" alt="Assay architecture: paying agent → Assay (REST + MCP over one engine) → The Graph; Blocky402 verify/settle → HCS receipts; the receipt written to the ERC-8004 Reputation Registry on Base Sepolia with the file on IPFS" style={{ display: "block", minWidth: 900, width: "100%" }} />
       </div>
       <h2 className="eyebrow" style={{ marginTop: "2.5rem" }}>Read path</h2>
       <ol style={{ paddingLeft: "1.2rem", color: "var(--ink-2)", fontWeight: 300 }}>

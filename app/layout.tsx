@@ -7,8 +7,11 @@ const newsreader = Newsreader({ subsets: ["latin"], style: ["italic"], weight: "
 const plex = IBM_Plex_Mono({ subsets: ["latin"], weight: ["400", "500"], variable: "--font-plex", display: "swap" });
 
 export const metadata = {
+  metadataBase: new URL(process.env.PUBLIC_BASE_URL ?? "https://assay-dusky.vercel.app"),
   title: "Assay",
   description: "Know who you're paying before you pay them. A paid pre-flight for ERC-8004 agent payments.",
+  openGraph: { title: "Assay", description: "Know who you're paying before you pay them.", images: [{ url: "/og.jpg", width: 1200, height: 630 }] },
+  twitter: { card: "summary_large_image", title: "Assay", description: "Know who you're paying before you pay them.", images: ["/og.jpg"] },
 };
 
 export default function RootLayout({ children }: { children: ReactNode }) {
