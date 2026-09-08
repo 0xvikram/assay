@@ -1,13 +1,27 @@
 import { NextResponse, type NextRequest } from "next/server";
-import { HTTPFacilitatorClient, x402ResourceServer, type RoutesConfig } from "@x402/core/server";
+import { HTTPFacilitatorClient, x402ResourceServer, type FacilitatorClient, type RouteConfig, type RoutesConfig } from "@x402/core/server";
 import { ExactHederaScheme } from "@x402/hedera/exact/server";
+import { BatchFacilitatorClient, GatewayEvmScheme } from "@circle-fin/x402-batching/server";
 import { withX402 } from "@x402/next";
+import { privateKeyToAccount } from "viem/accounts";
 import { submitReceipt } from "./hcs";
 
 export const FACILITATOR_URL = process.env.X402_FACILITATOR_URL ?? "https://api.testnet.blocky402.com";
 export const NETWORK = "hedera:testnet";
 export const HBAR = "0.0.0";
 export const USDC_TESTNET = "0.0.429274";
+/** Arc testnet (Circle). USDC is the gas token; payments are batched by Circle Gateway. */
+export const ARC_NETWORK = "eip155:5042002";
+/** The SDK defaults to the mainnet Gateway, which does not list Arc testnet. */
+export const ARC_GATEWAY_URL = process.env.ARC_GATEWAY_URL ?? "https://gateway-api-testnet.circle.com";
+
+/** The Arc seller is the service's EVM key unless told otherwise — one fewer thing to fund. */
+export function arcSeller(): `0x${string}` | null {
+  const explicit = process.env.ARC_SELLER_ADDRESS as `0x${string}` | undefined;
+  if (explicit) return explicit;
+  const key = process.env.SERVICE_EVM_PRIVATE_KEY as `0x${string}` | undefined;
+  return key ? privateKeyToAccount(key).address : null;
+}
 
 export type Tier = "agents" | "resolve" | "corroborate" | "lending";
 
@@ -71,8 +85,15 @@ let server: x402ResourceServer | null = null;
 
 export function resourceServer(): x402ResourceServer {
   if (server) return server;
-  server = new x402ResourceServer(new HTTPFacilitatorClient({ url: FACILITATOR_URL }))
+  // Two rails, one engine: Blocky402 settles Hedera; Circle Gateway batches Arc.
+  // A route's 402 lists both and the client picks the one it can pay on.
+  // @circle-fin/x402-batching 3.4.0 inlines its own copy of the core types with
+  // ResourceInfo.description optional where @x402/core 2.25 requires it — a
+  // declaration drift, not a runtime one. Cast at this one boundary.
+  const circle = new BatchFacilitatorClient({ url: ARC_GATEWAY_URL }) as unknown as FacilitatorClient;
+  server = new x402ResourceServer([new HTTPFacilitatorClient({ url: FACILITATOR_URL }), circle])
     .register("hedera:*", new ExactHederaScheme({ defaultAssets: { [NETWORK]: { asset: USDC_TESTNET, decimals: 6 } } }))
+    .register(ARC_NETWORK, new GatewayEvmScheme())
     .onAfterSettle(async (ctx) => {
       if (!ctx.result.success) return;
       const outcome = takeOutcome(ctx.paymentPayload);
@@ -83,6 +104,7 @@ export function resourceServer(): x402ResourceServer {
         payer: ctx.result.payer ?? null,
         amount: String(ctx.result.amount ?? ctx.requirements.amount ?? ""),
         asset: String(ctx.requirements.asset ?? ""),
+        network: String(ctx.requirements.network ?? ""),
         settlementTxId: ctx.result.transaction ?? null,
         verdict: outcome?.verdict ?? "",
         deployment: outcome?.deployment ?? "",
@@ -112,9 +134,14 @@ export function paid(pattern: string, tier: Tier, handler: Handler): Handler {
       { status: 503 },
     );
   }
+  const seller = arcSeller();
+  type Option = Extract<RouteConfig["accepts"], unknown[]>[number];
+  const hedera: Option = { scheme: "exact", network: NETWORK, payTo, price: price(tier) };
+  const arc: Option | null = seller ? { scheme: "exact", network: ARC_NETWORK, payTo: seller, price: TIERS[tier].usd } : null;
+  const accepts: Option[] = arc ? [hedera, arc] : [hedera];
   const routes: RoutesConfig = {
     [pattern]: {
-      accepts: { scheme: "exact", network: NETWORK, payTo, price: price(tier) },
+      accepts,
       description: TIERS[tier].description,
       mimeType: "application/json",
       serviceName: "Assay",

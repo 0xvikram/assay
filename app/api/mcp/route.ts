@@ -46,6 +46,7 @@ function paidWrappers() {
               payer: settlement.payer ?? null,
               amount: String(settlement.amount ?? paymentRequirements.amount ?? ""),
               asset: String(paymentRequirements.asset ?? ""),
+              network: String(paymentRequirements.network ?? ""),
               settlementTxId: settlement.transaction ?? null,
               verdict: "",
               deployment: "",

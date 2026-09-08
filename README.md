@@ -109,3 +109,15 @@ npm run mcp                       # stdio server, free, runs on your GRAPH_API_K
 ```
 Hosted: point any MCP client at `https://<host>/api/mcp` — `assay_agent` costs HBAR over
 x402, `assay_preview` is free. Config snippets and a paying client in [docs/MCP.md](docs/MCP.md).
+
+## Two rails, one engine
+
+Every paid route's `402` lists two ways to pay and the client picks:
+
+| Rail | Network | Facilitator | Client |
+|---|---|---|---|
+| Hedera testnet | `hedera:testnet` | Blocky402 (`api.testnet.blocky402.com`) — verifies and settles, pays the network fee | `npm run agent:pay` |
+| Arc testnet | `eip155:5042002` | Circle Gateway (`gateway-api-testnet.circle.com`) — off-chain signatures, batched settlement, no gas | `npm run agent:pay-arc [--deposit 1.00]` |
+
+Prices are the same tiers on both: a cross-chain corroboration costs four single reads.
+Settled calls on either rail leave a receipt on the HCS topic.

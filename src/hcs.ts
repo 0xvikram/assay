@@ -15,6 +15,7 @@ export interface Receipt {
   payer: string | null;
   amount: string | null;
   asset: string | null;
+  network: string;
   settlementTxId: string | null;
   verdict: string;
   deployment: string;

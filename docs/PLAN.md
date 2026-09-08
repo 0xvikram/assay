@@ -404,7 +404,7 @@ Paste each *Opus brief* into Claude Code from the repo root. Each brief assumes 
 - `aave-v3-ethereum` vs `aave-v3-base` → `AGREE`/`DISAGREE` with numbers; `aave-v3-ethereum` vs `compound-v3-ethereum` → `METHODOLOGY_MISMATCH`; anything vs `moonwell-base` → `SCHEMA_MISMATCH`. All live.
 - Adding a seventh lending source is a one-line JSON change. Record that moment for the Graph video.
 
-### Phase G — Arc + console + Privy (Sep 13)
+### Phase G — Arc + console + Privy (Sep 13) — ✅ Arc rail + console Sep 8; ⏳ Arc live payment (faucet USDC); ⏳ Privy (app credentials)
 
 **Opus brief**
 > **Arc:** add `app/api/arc/v1/check/[chain]/[agentId]/route.ts` gated by `createGatewayMiddleware({ sellerAddress: ARC_SELLER_ADDRESS }).require("$0.001")` from `@circle-fin/x402-batching/server` (keep the Hedera routes untouched — two rails, one engine). Add `src/agent/pay-arc.ts` using `GatewayClient({ chain: "arcTestnet", privateKey })` → `deposit` → `pay`. Document Arc chain id `5042002` and the USDC-as-gas note in README.
