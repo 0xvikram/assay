@@ -24,8 +24,11 @@ export function openapi(origin: string) {
       summary: "Is this agent's reputation real?",
       description:
         "A pre-flight for agent payments. Reads the ERC-8004 registries through The Graph and returns a verdict — VERIFIED, UNPROVEN or WASH_REPUTATION_DETECTED — with the evidence, what would change it, and a provenance envelope naming the exact subgraph deployment and block. Confidence is earned only from payment-backed reviews by independent addresses.",
+      license: { name: "MIT", identifier: "MIT" },
     },
     servers: [{ url: origin }],
+    // No authentication today; Phase C adds an x402 security scheme to the paid routes.
+    security: [],
     paths: {
       "/api/v1/agents/{chain}/{agentId}": {
         get: {
@@ -51,7 +54,7 @@ export function openapi(origin: string) {
           operationId: "resolveEndpoint",
           summary: "Which registered agents claim this endpoint URL?",
           parameters: [{ name: "url", in: "query", required: true, schema: { type: "string", format: "uri", examples: ["https://mcp.zyf.ai"] } }],
-          responses: { "200": { description: "Matches across every healthy chain", content: { "application/json": { schema: { $ref: "#/components/schemas/Resolve" } } } } },
+          responses: { "200": { description: "Matches across every healthy chain", content: { "application/json": { schema: { $ref: "#/components/schemas/Resolve" } } } }, "400": err("Missing url"), "429": err("Free-tier rate limit") },
         },
       },
       "/api/v1/corroborate/{ref}": {
@@ -62,8 +65,8 @@ export function openapi(origin: string) {
           responses: { "200": { description: "Cross-chain report", content: { "application/json": { schema: { $ref: "#/components/schemas/Corroboration" } } } }, "404": err("Unknown reference") },
         },
       },
-      "/api/v1/chains": { get: { operationId: "listChains", summary: "The chain registry with health flags", responses: { "200": { description: "Chains" } } } },
-      "/api/healthz": { get: { operationId: "health", summary: "Liveness", responses: { "200": { description: "OK" } } } },
+      "/api/v1/chains": { get: { operationId: "listChains", summary: "The chain registry with health flags", responses: { "200": { description: "Chains" }, "429": err("Free-tier rate limit") } } },
+      "/api/healthz": { get: { operationId: "health", summary: "Liveness", responses: { "200": { description: "OK" }, "503": err("Not ready") } } },
     },
     components: {
       schemas: {
