@@ -8,6 +8,16 @@ external, non-sponsor API. Grants settle on **Base**.
 Prerequisites: `npm i -g @bazantic/cli`, a Bazantic account, and the hosted Assay URL.
 **Put the Bazantic username in the ETHGlobal submission** — without it the entry cannot be attributed.
 
+## Registered (2026-09-08)
+
+| Gateway | Slug | MCP |
+|---|---|---|
+| assay | `7btlbq7n6nh3dm36ugrbopkuba` | https://7btlbq7n6nh3dm36ugrbopkuba.bazgateway.com/mcp |
+| sourcify | `md2n3ty64rhb3a67bif77ueuhm` | https://md2n3ty64rhb3a67bif77ueuhm.bazgateway.com/mcp |
+
+Bazantic's fetcher rejected Sourcify's own OpenAPI URL, so the gateway's spec is the one-endpoint
+subset we serve at `https://assay-dusky.vercel.app/api/openapi/sourcify`; its endpoint is still `sourcify.dev`.
+
 ## Gateway 1 — Assay (ours)
 
 ```

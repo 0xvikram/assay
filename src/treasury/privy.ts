@@ -50,7 +50,7 @@ export async function setupTreasury(maxValueWei = "0x2386F26FC10000" /* 0.01 ETH
     : await generateP256KeyPair();
 
   const quorum = await privy.keyQuorums().create({
-    display_name: "Assay treasury — mandate escalations",
+    display_name: "Assay treasury quorum",
     public_keys: [key.publicKey],
     authorization_threshold: 1,
   });
@@ -60,7 +60,7 @@ export async function setupTreasury(maxValueWei = "0x2386F26FC10000" /* 0.01 ETH
 
   const policy = await privy.policies().create({
     version: "1.0",
-    name: "Assay mandate — allowlisted counterparties, capped value",
+    name: "Assay mandate: allowlist + cap",
     chain_type: "ethereum",
     owner_id: quorum.id,
     rules: [

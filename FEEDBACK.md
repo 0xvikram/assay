@@ -41,4 +41,14 @@ The integration is `src/agent/quote.ts`; the recipe that uses it is `docs/bazant
 - `docs/bazantic/README.md` — Recipe A step 3
 - README → "Uniswap" section points here
 
-_(to be extended with the live-key run: request id, response excerpt, time-to-first-quote)_
+## Live run (2026-09-08, Base mainnet quote, read-only key)
+
+```
+npm run agent:quote -- --chain 8453 --in USDC --out WETH --amount 1000000
+  routing CLASSIC  request 9f35f007b7455c4e8fdaadaeee51d9e4
+  in   1000000 of 0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913
+  out  403780917613459 of 0x4200000000000000000000000000000000000006
+  gas  0.002449582420687579
+```
+Time from key creation to first successful quote: under ten minutes once the request shape was known;
+most of the preceding hour went to the documentation issues above.
