@@ -15,7 +15,9 @@
     "hcs:create-topic": "tsx --env-file=.env scripts/hcs-create-topic.ts",
     "register:self": "tsx --env-file=.env scripts/register-self.ts",
     "mcp": "tsx --env-file=.env bin/assay-mcp.ts",
-    "agent:pay-arc": "tsx --env-file=.env src/agent/pay-arc.ts"
+    "agent:pay-arc": "tsx --env-file=.env src/agent/pay-arc.ts",
+    "treasury:setup": "tsx --env-file=.env scripts/treasury-setup.ts",
+    "treasury:demo": "tsx --env-file=.env scripts/treasury-demo.ts"
   },
   "devDependencies": {
     "@types/node": "^22.10.2",
@@ -28,6 +30,7 @@
     "@circle-fin/x402-batching": "^3.4.0",
     "@hiero-ledger/sdk": "^2.85.0",
     "@modelcontextprotocol/sdk": "^1.30.0",
+    "@privy-io/node": "^0.34.0",
     "@x402/core": "^2.25.0",
     "@x402/evm": "^2.25.0",
     "@x402/fetch": "^2.25.0",

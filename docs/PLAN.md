@@ -317,7 +317,7 @@ Do these before writing code; each has lead time and none of it is parallelisabl
 - [x] Hosting: **Vercel Hobby** — decided Sept 8. Sign in with GitHub, keep `assay` on your personal account (Hobby cannot link Git-org repos). No card.
 - [ ] Bazantic: account exists. Note your username here: ________.
 - [ ] Uniswap developer platform account (`developers.uniswap.org/dashboard`) → API key.
-- [ ] **Decision:** external non-sponsor API for Bazantic "Agentify" — default **Sourcify** (`https://sourcify.dev/server`, no auth: *is the counterparty's contract verified?*); alternative GoPlus address security. Choose: ________.
+- [x] **Decision:** external non-sponsor API for Bazantic "Agentify" — **Sourcify** (decided Sep 8). It publishes OpenAPI at `https://sourcify.dev/server/api-docs/openapi.json` (verified 200), so `baz gateway add --spec-url` can ingest it directly — no hand-written spec. Recipe question: *is the counterparty's contract verified?* (`GET /v2/contract/{chainId}/{address}`).
 
 Never commit `.env`. Every new secret goes to `.env.example` as an empty key with a comment.
 
