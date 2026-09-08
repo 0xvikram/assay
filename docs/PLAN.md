@@ -416,7 +416,7 @@ Paste each *Opus brief* into Claude Code from the repo root. Each brief assumes 
 - The three pages are live on the Vercel URL and showing live verdicts; `/architecture` is linkable for the Arc submission.
 - Privy: one live transfer hash; policy and quorum ids in the README.
 
-### Phase H — World step-up (Sep 14)
+### Phase H — World step-up (Sep 14) — ✅ code Sep 8 `f4cd9e3`; ⏳ live (sandbox + Selfie flag)
 
 **Opus brief**
 > Add `app/escalate/page.tsx`: when the reference agent requests a mandate change (raise cap / add venue / extend expiry), render `IDKitInviteCodeRequestWidget` from `@worldcoin/idkit` with the `selfieCheckLegacy` preset, `environment: "sandbox"`, `app_id` and action `assay-escalation`. `handleVerify` POSTs to `app/api/verify-proof/route.ts` which calls `POST https://developer.world.org/api/v4/verify/{rp_id}` and, on success, writes an approval record the agent polls (`/api/v1/mandate/[id]/approvals`). Frame it as **abuse-prevention / continuity**, not KYC. Keep `docs/FEEDBACK-world.md` open in the editor and log every friction point as you go (docs, portal, sandbox install, invite-code handling, error codes).
@@ -426,7 +426,7 @@ Paste each *Opus brief* into Claude Code from the repo root. Each brief assumes 
 - A Selfie Check completed in the sandbox app flips an escalation to `approved`, and the agent proceeds. Recorded.
 - `docs/FEEDBACK-world.md` has ≥ 8 concrete observations.
 
-### Phase I — Bazantic, Uniswap, Harness PR (Sep 15)
+### Phase I — Bazantic, Uniswap, Harness PR (Sep 15) — ✅ code + docs Sep 8 `331c765`; Harness branch on fork `0xvikram/hedera-harness:doctor-x402-facilitator`; ⏳ PR (your word), Bazantic account, Uniswap key
 
 **Opus brief**
 > **Bazantic:** with `@bazantic/cli` add gateway 1 = the Assay API (`--spec-url https://<url>/openapi.json`), gateway 2 = the external API chosen in §4 (write a minimal OpenAPI 3.1 for it under `docs/openapi/`). Create two recipes: (a) *"Pre-flight before paying an agent"* — Assay check → external verification → **Uniswap API quote** for the amount to be paid; (b) *"Is this endpoint safe to pay?"* — resolve → check → external. Test each with `baz grant create` + `baz curl … --max-amount`. Record both screen captures.
@@ -438,7 +438,7 @@ Paste each *Opus brief* into Claude Code from the repo root. Each brief assumes 
 - `FEEDBACK.md` committed, form submitted (screenshot saved).
 - PR URL in README.
 
-### Phase J — videos, README, submission (Sep 15 pm – 16)
+### Phase J — videos, README, submission (Sep 15 pm – 16) — shot lists in `docs/DEMO.md`
 
 Two cuts, scripted in `docs/demo/SCRIPT.md`:
 - **≤ 5 min (Hedera / Arc / Privy):** problem (30 s: the 309k-review farm) → 402 → paid → 200 with HashScan → HCS receipt → agent refuses WASH → step-up via Selfie Check → Privy policy blocks over-cap → architecture.
