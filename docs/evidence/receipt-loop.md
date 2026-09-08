@@ -42,3 +42,24 @@ a Hedera settlement backing an ERC-8004 review on Base Sepolia. The writer is th
 ```
 Wallet `0x103938199206582f9e3a2F42c6d636A88298f0ed` · policy and wallet owned by the key quorum; the refusal happened
 inside Privy before anything was signed.
+
+## 4. The loop, read back through the same engine (subgraph indexed within a minute)
+
+```
+  Assay  84532:9200
+  UNPROVEN   confidence 0/100
+  ! Too few payment-backed reviews to stand on.        1 paid of 1 (100.0%)
+  · Too few reviews to judge concentration or timing.  1 of the 10 needed
+  ── to reach VERIFIED ──
+  → 4 more payment-backed reviews from 2 more independent payers — each must carry proofOfPayment
+  → Spread the paid reviews: one payer wrote 100.0% of them; the ceiling is 50.0%.
+  ── signals ──
+  payment-proof coverage    100.0%  (1 paid)
+  ── provenance ──
+  Base Sepolia (84532) · deployment QmZZUucJygeDN8sRWEd7MQ9k4cgLdpuB1bErD3gqBDuxjm · block 46547582
+```
+
+The first read of our own receipt found a calibration bug: one review from one address is "100%
+concentrated" and the engine called it `WASH`. Concentration and timing detectors now apply only
+above a ten-review floor; below it the verdict stays `UNPROVEN` with the countdown. The Base farm
+(1,000 unpaid) and the sybil farm are unchanged.

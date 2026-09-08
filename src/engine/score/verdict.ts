@@ -39,7 +39,10 @@ export function assess(s: Signals): Assessment {
   const f: Finding[] = [];
 
   // ---- critical: the signal is manufactured -------------------------------
-  if (s.sample > 0 && s.topReviewerShare >= THRESHOLDS.washTopReviewerShare) {
+  // Concentration means nothing below a sample floor: one review from one
+  // address is 100% "concentrated" and says only that the agent is new. Our own
+  // first receipt taught us that. Below the floor the verdict stays UNPROVEN.
+  if (s.sample >= THRESHOLDS.uniformSampleFloor && s.topReviewerShare >= THRESHOLDS.washTopReviewerShare) {
     f.push({
       code: "SINGLE_SOURCE_REPUTATION",
       severity: "critical",
@@ -97,7 +100,7 @@ export function assess(s: Signals): Assessment {
       measured: `${s.paidFeedback} paid of ${s.sample} (${pct(s.paymentProofCoverage)})`,
     });
   }
-  if (s.sample > 0 && s.topReviewerShare >= THRESHOLDS.concernTopReviewerShare
+  if (s.sample >= THRESHOLDS.uniformSampleFloor && s.topReviewerShare >= THRESHOLDS.concernTopReviewerShare
       && s.topReviewerShare < THRESHOLDS.washTopReviewerShare) {
     f.push({
       code: "CONCENTRATED_REVIEWERS",
@@ -120,6 +123,14 @@ export function assess(s: Signals): Assessment {
       severity: "warning",
       statement: "The registration declares little about what this agent can actually do.",
       measured: `${s.declared.length}/${s.declared.length + s.missing.length} fields — missing ${s.missing.join(", ")}`,
+    });
+  }
+  if (s.sample > 0 && s.sample < THRESHOLDS.uniformSampleFloor) {
+    f.push({
+      code: "THIN_SAMPLE",
+      severity: "info",
+      statement: "Too few reviews to judge concentration or timing.",
+      measured: `${s.sample} of the ${THRESHOLDS.uniformSampleFloor} needed before those detectors apply`,
     });
   }
   if (s.sample > 0 && s.namedTool === 0) {

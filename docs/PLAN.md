@@ -357,7 +357,7 @@ Paste each *Opus brief* into Claude Code from the repo root. Each brief assumes 
 - `/api/openapi` validates (`npx @redocly/cli lint` once; don't add it as a dep).
 - A cold request (first after ≥15 min idle) returns in under 3 s. If it doesn't, the fan-out is serial — fix it now, not on Sep 12.
 
-### Phase C — x402 on Hedera via Blocky402 (Sep 10) — **the bounty** — ✅ code + live 402 Sep 8 `1ced8f4`; ⏳ paid request (Hedera accounts)
+### Phase C — x402 on Hedera via Blocky402 (Sep 10) — **the bounty** — ✅ **done Sep 8**: paid request settled, HCS receipts (`docs/evidence/hedera-first-paid-request.md`), tag `hedera-paid-request`
 
 **Opus brief**
 > Gate the paid route handlers with `@x402/next` using exactly the wiring in §1 (Hedera). **Per route — never `middleware.ts`**, which runs on Edge where the Hedera signer cannot. Facilitator `https://api.testnet.blocky402.com`. Register `hedera:*` with `ExactHederaScheme`. Price tiers in `src/x402.ts` as a single table: `preview` free · `agents` $0.001 · `resolve` $0.0005 · `corroborate` $0.004 · `lending` $0.002. `payTo` = `HEDERA_SERVICE_ACCOUNT_ID`. Start with **HBAR (`0.0.0`)** so no token association is needed; make USDC (`0.0.429274`) a config switch. On cold start call the facilitator's `/supported`, log the advertised `hedera:testnet` kind and `feePayer`, and **fail the request with 503** if absent — on serverless there is no boot to refuse. Cache that check for 60 s.
@@ -370,7 +370,7 @@ Paste each *Opus brief* into Claude Code from the repo root. Each brief assumes 
 - The HCS topic on HashScan shows the receipt message.
 - README section "Payment flow" written with the exact sequence and the two curl outputs. **Tag `hedera-paid-request`.**
 
-### Phase D — paying agent with a mandate (Sep 11 am) — ✅ code Sep 8 `7a2def2`; ⏳ live receipt (Base Sepolia ETH)
+### Phase D — paying agent with a mandate (Sep 11 am) — ✅ **done Sep 8**: Assay = agent 9200 on base-sepolia; receipt with Hedera proof indexed and read back (`docs/evidence/receipt-loop.md`)
 
 **Opus brief**
 > Extend `src/agent/` into a small reference agent that (1) is given a counterparty (`chain:agentId` or an endpoint URL), (2) pays Assay for a check, (3) refuses to proceed on `WASH_REPUTATION_DETECTED`, requires a human step-up on `UNPROVEN` above a configurable spend, and proceeds on `VERIFIED`. The mandate is a JSON file `mandate.json` `{maxSpendUsd, allowedVerdicts, requireStepUpAbove, expiresAt}`. Use `@x402/fetch` lifecycle hooks (`onBeforePaymentCreation`) to enforce `maxSpendUsd` at the payment layer, not just in app logic. Print an **action trail**: intent → evidence bought (what, price, tx) → decision → next action. Add `npm run agent:demo` that runs the three fixture agents in a row.
@@ -404,7 +404,7 @@ Paste each *Opus brief* into Claude Code from the repo root. Each brief assumes 
 - `aave-v3-ethereum` vs `aave-v3-base` → `AGREE`/`DISAGREE` with numbers; `aave-v3-ethereum` vs `compound-v3-ethereum` → `METHODOLOGY_MISMATCH`; anything vs `moonwell-base` → `SCHEMA_MISMATCH`. All live.
 - Adding a seventh lending source is a one-line JSON change. Record that moment for the Graph video.
 
-### Phase G — Arc + console + Privy (Sep 13) — ✅ Arc rail + console Sep 8; ⏳ Arc live payment (faucet USDC); ⏳ Privy (app credentials)
+### Phase G — Arc + console + Privy (Sep 13) — ✅ **done Sep 8**: Arc paid (`docs/evidence/arc-paid-request.md`); Privy policy refusal live; third rail Base Sepolia
 
 **Opus brief**
 > **Arc:** add `app/api/arc/v1/check/[chain]/[agentId]/route.ts` gated by `createGatewayMiddleware({ sellerAddress: ARC_SELLER_ADDRESS }).require("$0.001")` from `@circle-fin/x402-batching/server` (keep the Hedera routes untouched — two rails, one engine). Add `src/agent/pay-arc.ts` using `GatewayClient({ chain: "arcTestnet", privateKey })` → `deposit` → `pay`. Document Arc chain id `5042002` and the USDC-as-gas note in README.

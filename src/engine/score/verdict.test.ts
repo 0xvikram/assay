@@ -84,3 +84,11 @@ test("a paid population dominated by one payer does not earn VERIFIED", () => {
   assert.equal(a.verdict, "UNPROVEN");
   assert.ok(a.nextSteps.some((s) => s.startsWith("Spread the paid reviews")));
 });
+
+test("one payment-backed review from one payer is unproven, not wash", () => {
+  // Assay's own first receipt: a new agent with a single paid review.
+  const a = assess(computeSignals(agent([review(1, { paidTx: "0xtx1" })])));
+  assert.equal(a.verdict, "UNPROVEN");
+  assert.ok(a.findings.some((f) => f.code === "THIN_SAMPLE"));
+  assert.ok(!a.findings.some((f) => f.severity === "critical"));
+});
