@@ -49,6 +49,13 @@ try {
     console.log(`    ${C.dim(f.measured)}`);
   }
 
+  if (a.nextSteps.length) {
+    console.log("");
+    const label = a.verdict === "VERIFIED" ? "to raise confidence" : "to reach VERIFIED";
+    console.log(C.dim(`  ── ${label} ${"─".repeat(Math.max(1, 55 - label.length - 4))}`));
+    for (const step of a.nextSteps) console.log(`  ${C.dim("→")} ${step}`);
+  }
+
   console.log("");
   console.log(C.dim("  ── signals ────────────────────────────────────────────"));
   const row = (k: string, v: string) => console.log(`  ${C.dim(k.padEnd(26))}${v}`);

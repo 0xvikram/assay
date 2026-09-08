@@ -1,7 +1,7 @@
 # Assay — Execution & Implementation Plan
 
 **Event:** ETHOnline 2026 · Sept 4–16 · async · solo · starting fresh
-**Written:** Sept 6 (day 3). **Days left including today: 11.**
+**Written:** Sept 6. **Recalibrated Sept 8 — 9 days left including today.** Idea B (lending) is deferred; this plan is the hero project only.
 **Goal:** secure one bounty; collect every other track the same build qualifies for.
 
 This document is written to be executed by Claude Code (Opus). Each phase has an
@@ -19,11 +19,24 @@ the ERC-8004 registries through The Graph and returning a verdict —
 `VERIFIED` / `UNPROVEN` / `WASH_REPUTATION_DETECTED` — with the evidence attached and
 a provenance envelope naming the exact subgraph deployment and block it was read at.
 Confidence is only ever earned from payment-backed reviews by independent addresses.
-The same engine, pointed at Messari's standardized lending schema, proves the domain
-swap is a registry entry rather than a rewrite.
 
-**Already built (day 3):** scoring engine, 10 named detectors, provenance envelope,
-chain registry, CLI. Verified on mainnet: the #1 agent on Base by review count
+It has a write side too, because a punisher alone is a bad product. Reviews are free to
+write, which is exactly why they are worthless — a farm wrote 309,734 for pocket change.
+A review that carries a settlement hash costs whatever the work cost. So after every
+x402 payment, the paying agent mints the one kind of reputation that cannot be faked:
+ERC-8004 feedback with `proofOfPayment` filled in. Assay reads reputation to block bad
+agents and writes the receipt that lets a good agent earn its way to `VERIFIED`.
+
+**Independent confirmation (arXiv:2606.26028, July 2026):** 155,300 feedback records
+studied; 59–91% of reviewers Sybil-flagged per chain; **98.7–100% of records carry no
+proof of payment**; median cost to manipulate a score $0.0027. The paper measured and
+did not deploy. The #1 agent on Base is still a farm two months later. RNWY
+(`rnwy.com`) is a free explorer that scores 0–95; it has no write side and is not
+payable at the point of decision.
+
+**Already built (Sept 8):** scoring engine, 11 named detectors, provenance envelope,
+chain registry, CLI, `nextSteps` on every report (the path to VERIFIED), and the
+attack-victim rule: payment-backed evidence outranks manufactured free reviews. Verified on mainnet: the #1 agent on Base by review count
 (309,734 reviews) is a farm — 96.5% single-source, uniform score, 100% in one 24h window.
 
 ---
@@ -123,6 +136,21 @@ mcpServer.tool("assay_thresholds", "Free: current detector thresholds.", {}, fre
 ```
 Free tools stay unwrapped. Paid + free on one server is the honest shape: discovery is free, evidence costs.
 Framework adapters live at `x402-foundation/x402 → typescript/packages/http/{next,express,fastify,hono,fetch,axios,paywall}`.
+
+### ERC-8004 Reputation Registry — write side (verified Sept 8 from the EIP)
+- `giveFeedback(agentId, value, valueDecimals, tag1, tag2, endpoint, feedbackURI, feedbackHash)` is
+  **permissionless**. The only rule: *"The feedback submitter MUST NOT be the agent owner or an
+  approved operator."* So the **payer** writes the review, never the service — which is the right shape.
+- Off-chain feedback file carries `proofOfPayment: { fromAddress, toAddress, chainId, txHash }` and the
+  spec says the payment may be **on another chain**. A Hedera settlement (EVM chain id **296** testnet /
+  **295** mainnet) can back feedback written on Base. That is the whole bridge between the two tracks.
+- `revokeFeedback(agentId, feedbackIndex)` — only the writing address. An attacked agent cannot delete
+  an attacker's reviews; that is why the engine outranks them instead.
+- `appendResponse(agentId, clientAddress, feedbackIndex, responseURI, responseHash)` is permissionless
+  and the spec names *"any off-chain data intelligence aggregator tagging feedback as spam"* as an
+  intended caller. Assay is that caller, described in the standard. (Tier C: tag one farm entry.)
+- Demo chain for writes: **base-sepolia** (Agent0 subgraph healthy, gas free). Assay registers itself
+  there as an agent so the loop closes on camera: pay Assay → receipt → next read shows paid feedback.
 
 ### Privy
 - `@privy-io/node`: create a wallet, attach a **policy** (allowlist + spending limit — docs: `controls/policies/example-policies/ethereum`), a **key quorum** for escalation (`controls/key-quorum/create`), optionally **intents** (`transaction-management/intents/create/execute-transfer`).
@@ -259,8 +287,8 @@ old plan with the dates shifted.
 | 5 | **Sep 8 (today)** | Accounts and lead-time requests (§4) **first**. Then Phase A: engine → `src/engine`, endpoint→agent resolver, cross-chain corroboration, pinned fixtures. | — |
 | 6 | Sep 9 | Phase B: Next.js app, deployed to Vercel, live URL, `/api/openapi`, unpaid `/api/v1/agents/[ref]` returning the verdict + provenance. | — |
 | 7 | Sep 10 | **Phase C: x402 gate on Hedera via Blocky402. One real paid request. HashScan. HCS receipt topic.** | **Hedera Agentic** |
-| 8 | Sep 11 | Phase D: reference paying agent with a spend cap + refusal on `WASH`; metered tiers. Phase E: MCP — `bin/assay-mcp.ts` (stdio) and `/api/mcp` with `@x402/mcp` paid tools. | Hedera bonus, Graph AI (fresh) |
-| 9 | Sep 12 | Phase F: `registry/lending.json`, Messari queries, methodology-aware reconcile, `/api/v1/lending`. `docs/ARCHITECTURE.md` + rendered diagram page. | Graph Composable |
+| 8 | Sep 11 | Phase D: reference paying agent with a spend cap + refusal on `WASH`; metered tiers; **the receipt** — payment-backed feedback written to base-sepolia, loop closed on camera. | Hedera bonus |
+| 9 | Sep 12 | Phase E: MCP — `bin/assay-mcp.ts` (stdio) and `/api/mcp` with `@x402/mcp` paid tools. `docs/ARCHITECTURE.md` + rendered diagram page. | Graph AI (fresh), Graph Composable (cross-chain) |
 | 10 | Sep 13 | Phase G: Arc Nanopayments route + buyer; Privy wallet + policy + key quorum + one live transfer. | Arc ×2, Privy ×2 |
 | 11 | Sep 14 | Phase H: World Selfie Check step-up + `docs/FEEDBACK-world.md`. | World |
 | 12 | Sep 15 | Phase I: Bazantic two gateways + two recipes; Uniswap quote + `FEEDBACK.md` + form; Harness PR. Then both videos. | Bazantic ×2, Uniswap, Harness |
@@ -268,8 +296,9 @@ old plan with the dates shifted.
 
 **If a day slips, drop in this order** — decide once, now, so you never spend a day deliberating:
 Tier C (ENS, Chainlink) → Bazantic *Agentify* (keep *Best Recipe*) → Arc *DeFi* → Privy *Financial flow*.
-**Never drop, at any cost:** Phase C (Hedera), Phase E (MCP), Phase F (Composable). Those three are the
-bounty you said you came for, and they are the only ones with no substitute.
+**Never drop, at any cost:** Phase C (Hedera), Phase D's receipt, Phase E (MCP). Those are the bounty you
+said you came for, and they are the only ones with no substitute. Idea B is deferred, not dropped: if
+Sep 13–15 land early it returns as the strongest possible Graph Composable entry.
 
 Commit at least once per day. Tag the day's last commit `day-N`.
 
@@ -345,9 +374,11 @@ Paste each *Opus brief* into Claude Code from the repo root. Each brief assumes 
 
 **Opus brief**
 > Extend `src/agent/` into a small reference agent that (1) is given a counterparty (`chain:agentId` or an endpoint URL), (2) pays Assay for a check, (3) refuses to proceed on `WASH_REPUTATION_DETECTED`, requires a human step-up on `UNPROVEN` above a configurable spend, and proceeds on `VERIFIED`. The mandate is a JSON file `mandate.json` `{maxSpendUsd, allowedVerdicts, requireStepUpAbove, expiresAt}`. Use `@x402/fetch` lifecycle hooks (`onBeforePaymentCreation`) to enforce `maxSpendUsd` at the payment layer, not just in app logic. Print an **action trail**: intent → evidence bought (what, price, tx) → decision → next action. Add `npm run agent:demo` that runs the three fixture agents in a row.
+> **Write side (the receipt).** `src/agent/receipt.ts`: after any successful x402 payment, the paying agent writes ERC-8004 feedback about the provider it paid — `giveFeedback` on the Reputation Registry on **base-sepolia** (`viem`, `AGENT_EVM_PRIVATE_KEY`), `feedbackURI` pointing at `/api/feedback/[id]` on our host, whose JSON includes `proofOfPayment: { fromAddress, toAddress, chainId: 296, txHash: <hedera settlement> }`. Register Assay itself as an agent on base-sepolia (`npm run register:self`, once) so the reference agent reviews *Assay* after paying it. Then run `assay base-sepolia:<assayId>` — the paid review is visible with `proofOfPaymentTxHash` set, and `nextSteps` counts down. Record that; it is the "what about good agents" answer on camera.
 
 **Acceptance**
 - `npm run agent:demo` shows one refusal (WASH), one step-up request (UNPROVEN), and the hook aborting a payment above the cap.
+- After `npm run agent:pay`, `npm run assay -- base-sepolia:<assayId>` shows ≥1 review with a payment proof pointing at the HashScan transaction. **Tag `receipt-loop-closed`.**
 
 ### Phase E — MCP server, paid tools (Sep 11 pm)
 
@@ -362,7 +393,7 @@ Paste each *Opus brief* into Claude Code from the repo root. Each brief assumes 
 - `npx @modelcontextprotocol/inspector` against `https://<vercel-url>/api/mcp` lists the tools, and calling `assay_agent` **without payment returns a 402-shaped error**; the reference agent from Phase D calls it and pays. Record this — it is the strongest single shot in the Hedera video.
 - The README has a "Use from Claude / Cursor" section. This is the Graph AI (From Scratch) submission surface.
 
-### Phase F — Idea B: lending evidence (Sep 12)
+### Phase F — DEFERRED (Idea B: lending evidence). Do not start until A–E, G–J are done.
 
 **Opus brief**
 > Add `registry/lending.json` with the six Messari deployments from `docs/PLAN.md` §1 (id, network, protocol, schema/subgraph/methodology versions). On load, verify each entry by querying `protocols { id name network schemaVersion subgraphVersion methodologyVersion }` and `_meta`; if the on-chain versions disagree with the registry, log a warning and trust the subgraph. Detect the compound-v3-base duplicate-ID problem by checking `protocols[0].network` and mark the entry `unusable` with a reason if it isn't Base.
@@ -425,7 +456,7 @@ README must have: one-paragraph pitch, setup from clean clone, architecture (lin
 |---|---|---|
 | Hedera — AI & Agentic Payments | Live Blocky402-settled endpoint; one real paid request; HashScan; ≤5 min video | Phase C, J |
 | The Graph — AI (From Scratch) | MCP server, live Graph data, 2–4 min video | Phase E, J |
-| The Graph — Composable/Standardized | Messari Lending 3.1.0 across ≥3 sources + Agent0; reconcile; not one subgraph | Phase F |
+| The Graph — Composable/Standardized | Six Agent0 deployments, one schema, cross-chain `corroborate()` + `CROSS_CHAIN_INCONSISTENT`; a chain is a registry row. Weaker than Messari; Phase F upgrades it if time allows | Phase A, E |
 | Arc — Launch Testnet→Mainnet | Nanopayments route live; frontend+backend; diagram; mainnet-ready note by Sept 30 | Phase G |
 | Arc — Agentic Economy | Agent with decision logic that pays over Arc | Phase G |
 | Privy — B2B | Wallet + policy + quorum + approval workflow; source | Phase G |
@@ -436,7 +467,7 @@ README must have: one-paragraph pitch, setup from clean clone, architecture (lin
 | Uniswap — Stack Contribution | `FEEDBACK.md`, form, README pointers | Phase I |
 | Hedera — Harness OSS | Open PR, ≤5 min video of the improvement | Phase I |
 
-Tier C (only if Sep 12–14 land early): ENSv2 subnames per agent with a Permissioned Resolver holding the mandate hash; Chainlink CRE `handlerInTee` evaluating private mandate thresholds; Chainlink liquidation challenge (`join()` from Sept 8).
+Tier C (only if Sep 13–15 land early — and Phase F first): ENSv2 subnames per agent with a Permissioned Resolver holding the mandate hash; Chainlink CRE `handlerInTee` evaluating private mandate thresholds; Chainlink liquidation challenge (`join()` from Sept 8).
 
 ---
 

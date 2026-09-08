@@ -15,6 +15,8 @@ export interface Assessment {
   confidence: number;
   headline: string;
   findings: Finding[];
+  /** What would change this verdict. Every step costs real, payment-backed work. */
+  nextSteps: string[];
 }
 
 /**
@@ -136,9 +138,26 @@ export function assess(s: Signals): Assessment {
     s.paidFeedback >= THRESHOLDS.minPaidFeedback &&
     s.paidTopReviewerShare <= THRESHOLDS.maxPaidTopShare;
 
+  // Anyone may write free feedback about any agent — including an attacker who
+  // wants a good agent to look like a farm. Payment-backed evidence outranks
+  // free evidence: when the paid population stands on its own, manufactured
+  // unpaid reviews are noise to report, not a verdict. Self-issued feedback is
+  // the one signal that stays damning, because the agent wrote it itself.
+  const selfIssued = critical.some((x) => x.code === "SELF_ISSUED_FEEDBACK");
+  const outranked = earned && !selfIssued && critical.length > 0;
+  if (outranked) {
+    for (const x of critical) x.severity = "warning";
+    f.push({
+      code: "UNPAID_NOISE_OUTRANKED",
+      severity: "info",
+      statement: "Manufactured unpaid reviews are present but outranked by payment-backed evidence.",
+      measured: `${s.paidFeedback} paid reviews from ${s.paidReviewers} independent payers stand on their own`,
+    });
+  }
+
   let verdict: Verdict;
   let headline: string;
-  if (critical.length > 0) {
+  if (selfIssued || (critical.length > 0 && !earned)) {
     verdict = "WASH_REPUTATION_DETECTED";
     headline = critical[0]!.statement;
   } else if (earned) {
@@ -151,16 +170,54 @@ export function assess(s: Signals): Assessment {
       : "Reputation exists, but nothing about it can be independently verified.";
   }
 
-  // Confidence is earned only from payment-backed, independent reviews.
+  // Confidence is earned only from payment-backed, independent reviews. When
+  // manufactured noise had to be outranked, the paid evidence is doing all the
+  // work and we say so by halving what it earns.
   let confidence = 0;
   if (verdict === "VERIFIED") {
     const depth = Math.min(1, s.paidFeedback / 25);
     const spread = Math.min(1, s.paidReviewers / 10);
     const independence = 1 - s.paidTopReviewerShare;
     confidence = Math.round(100 * (0.4 * depth + 0.35 * spread + 0.25 * independence));
+    if (outranked) confidence = Math.round(confidence / 2);
   } else if (verdict === "UNPROVEN") {
     confidence = Math.round(100 * 0.25 * Math.min(1, s.paymentProofCoverage * 4));
   }
 
-  return { verdict, confidence, headline, findings: f };
+  return { verdict, confidence, headline, findings: f, nextSteps: nextSteps(s, verdict, selfIssued) };
+}
+
+/**
+ * What would change this verdict. UNPROVEN must read as a path, not a
+ * punishment, and WASH must say exactly what it would take to outrank the
+ * manufactured signal — otherwise a good agent has no way to earn its way out.
+ * Only payment-backed reviews count, so every step here costs the agent real
+ * work; that is the point.
+ */
+function nextSteps(s: Signals, verdict: Verdict, selfIssued: boolean): string[] {
+  const out: string[] = [];
+  const n = (k: number, one: string, many: string) => `${k} ${k === 1 ? one : many}`;
+
+  if (selfIssued) {
+    out.push("Revoke the self-issued reviews from the writing address (revokeFeedback); this verdict does not lift while they stand.");
+  }
+  const needPaid = Math.max(0, THRESHOLDS.minPaidFeedback - s.paidFeedback);
+  const needPayers = Math.max(0, THRESHOLDS.minPaidReviewers - s.paidReviewers);
+  if (needPaid > 0 || needPayers > 0) {
+    const from = needPayers > 0 ? ` from ${n(needPayers, "more independent payer", "more independent payers")}` : "";
+    out.push(`${n(needPaid, "more payment-backed review", "more payment-backed reviews")}${from} — each must carry proofOfPayment (fromAddress, toAddress, chainId, txHash).`);
+  }
+  if (s.paidFeedback > 0 && s.paidTopReviewerShare > THRESHOLDS.maxPaidTopShare) {
+    out.push(`Spread the paid reviews: one payer wrote ${pct(s.paidTopReviewerShare)} of them; the ceiling is ${pct(THRESHOLDS.maxPaidTopShare)}.`);
+  }
+  if (s.registrationCompleteness < 0.5) {
+    out.push(`Complete the registration file — missing ${s.missing.join(", ")}.`);
+  }
+  if (s.validations === 0) {
+    out.push("Optional: one validation-registry attestation. Not required for VERIFIED; raises confidence.");
+  }
+  if (verdict === "VERIFIED") {
+    out.unshift(`Confidence grows with depth (${s.paidFeedback}/25 paid reviews) and spread (${s.paidReviewers}/10 independent payers).`);
+  }
+  return out;
 }
