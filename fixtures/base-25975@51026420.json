@@ -1,0 +1,119 @@
+{
+  "agent": {
+    "id": "8453:25975",
+    "name": null,
+    "owner": "0x69747c4ce6185d21a33b3bcdba980d659600ac7b",
+    "wallet": "0x69747c4ce6185d21a33b3bcdba980d659600ac7b",
+    "ens": null,
+    "x402Support": null,
+    "registeredDaysAgo": 185
+  },
+  "assessment": {
+    "verdict": "WASH_REPUTATION_DETECTED",
+    "confidence": 0,
+    "headline": "One address wrote most of this agent's reputation.",
+    "findings": [
+      {
+        "code": "SINGLE_SOURCE_REPUTATION",
+        "severity": "critical",
+        "statement": "One address wrote most of this agent's reputation.",
+        "measured": "96.0% of 1000 reviews from 0x7cf8286c9b476de7c262d086e2861fecefd3810b"
+      },
+      {
+        "code": "UNIFORM_UNPAID_SCORES",
+        "severity": "critical",
+        "statement": "Every review carries an identical score and none is backed by a payment.",
+        "measured": "1 distinct value across 1000 reviews, 0 payment proofs"
+      },
+      {
+        "code": "BURST_TIMED_REVIEWS",
+        "severity": "critical",
+        "statement": "Reviews arrived in a single burst rather than accumulating through use.",
+        "measured": "100.0% of reviews inside one 24h window"
+      },
+      {
+        "code": "NO_PAYMENT_PROOF",
+        "severity": "warning",
+        "statement": "No review is backed by a payment anyone can verify on-chain.",
+        "measured": "0 of 1000 reviews carry proofOfPaymentTxHash"
+      },
+      {
+        "code": "NO_VALIDATION",
+        "severity": "warning",
+        "statement": "No independent validator has ever attested to this agent.",
+        "measured": "0 entries in the validation registry"
+      },
+      {
+        "code": "SPARSE_REGISTRATION",
+        "severity": "warning",
+        "statement": "The registration declares little about what this agent can actually do.",
+        "measured": "0/9 fields — missing name, description, mcpEndpoint, mcpTools, a2aEndpoint, webEndpoint, ens, did, supportedTrusts"
+      },
+      {
+        "code": "UNATTRIBUTED_REVIEWS",
+        "severity": "info",
+        "statement": "No review says which tool or skill it is rating.",
+        "measured": "0 of 1000 reviews name an mcpTool"
+      }
+    ],
+    "nextSteps": [
+      "5 more payment-backed reviews from 3 more independent payers — each must carry proofOfPayment (fromAddress, toAddress, chainId, txHash).",
+      "Complete the registration file — missing name, description, mcpEndpoint, mcpTools, a2aEndpoint, webEndpoint, ens, did, supportedTrusts.",
+      "Optional: one validation-registry attestation. Not required for VERIFIED; raises confidence."
+    ]
+  },
+  "signals": {
+    "sample": 1000,
+    "revoked": 0,
+    "distinctReviewers": 2,
+    "topReviewerShare": 0.96,
+    "topReviewer": "0x7cf8286c9b476de7c262d086e2861fecefd3810b",
+    "reviewerHHI": 0.9232,
+    "paymentProofCoverage": 0,
+    "paidFeedback": 0,
+    "paidReviewers": 0,
+    "paidTopReviewerShare": 0,
+    "selfIssued": 0,
+    "distinctScoreValues": 1,
+    "burstShare": 1,
+    "namedTool": 0,
+    "validations": 0,
+    "validationsPassed": 0,
+    "registrationCompleteness": 0,
+    "declared": [],
+    "missing": [
+      "name",
+      "description",
+      "mcpEndpoint",
+      "mcpTools",
+      "a2aEndpoint",
+      "webEndpoint",
+      "ens",
+      "did",
+      "supportedTrusts"
+    ],
+    "ageDays": 185
+  },
+  "provenance": {
+    "chain": "Base",
+    "chainId": 8453,
+    "subgraphId": "43s9hQRurMGjuYnC1r2ZwS6xSQktbFyXMPMqGKUFJojb",
+    "deployment": "QmcLwgyKn3RnyhkkSwLYscP9dL1Fc6omvfC9bFRgcK1e7u",
+    "block": 51026420,
+    "blockTime": "2026-09-08T04:36:27.000Z",
+    "hasIndexingErrors": false,
+    "sampleCap": 1000,
+    "sampleTruncated": true,
+    "readAt": "2026-09-08T04:36:31.640Z",
+    "latencyMs": 2344,
+    "thresholds": {
+      "washTopReviewerShare": 0.6,
+      "concernTopReviewerShare": 0.4,
+      "minPaidReviewers": 3,
+      "minPaidFeedback": 5,
+      "maxPaidTopShare": 0.5,
+      "uniformSampleFloor": 10,
+      "burstShare": 0.8
+    }
+  }
+}

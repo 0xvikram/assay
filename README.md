@@ -56,3 +56,21 @@ Add an entry to `registry/chains.json`. No code changes.
 
 Day 3. Scoring engine reads live mainnet data across five deployments.
 Next: x402 gate on Hedera, then the MCP surface.
+
+## Commands
+
+```
+npm run assay -- base:25975                          # verdict for one agent
+npm run assay -- --resolve https://mcp.zyf.ai        # which agents claim this endpoint?
+npm run assay -- --corroborate base:25975            # the owner, across every healthy chain
+npm run assay -- --fixture fixtures/base-25975@51026420.json   # pinned replay; prints source: fixture
+npm test · npm run typecheck
+```
+
+Every report ends with **what would change the verdict**, priced in payment-backed
+reviews. `UNPROVEN` is a path, not a punishment. Payment-backed evidence outranks
+free evidence: an agent attacked with manufactured reviews is not stuck at `WASH`
+if its paid reviews stand on their own.
+
+`fixtures/` holds pinned snapshots (block number in the filename) so the demo
+survives the farm going quiet. A replay always announces itself as a fixture.

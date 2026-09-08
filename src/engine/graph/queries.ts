@@ -80,3 +80,47 @@ export function fetchAgent(
   const id = agentId.includes(":") ? agentId : `${chain.chainId}:${agentId}`;
   return query<{ agent: RawAgent | null }>(chain, AGENT_BODY, { id, first: sampleSize });
 }
+
+/** The slice of an agent needed to match it to another, without pulling its feedback. */
+export interface AgentStub {
+  id: string;
+  agentId: string;
+  chainId: string;
+  owner: string;
+  registrationFile: {
+    name: string | null;
+    ens: string | null;
+    mcpEndpoint: string | null;
+    webEndpoint: string | null;
+    a2aEndpoint: string | null;
+  } | null;
+}
+
+const STUB = `id agentId chainId owner registrationFile { name ens mcpEndpoint webEndpoint a2aEndpoint }`;
+
+/**
+ * A registration file has no back-reference to its agent in this schema, so the
+ * lookup goes through a nested filter on `agents`. Candidates are the spellings
+ * an endpoint may have been registered under; the match is exact per spelling.
+ */
+export function fetchAgentsByEndpoint(chain: ChainEntry, candidates: string[]) {
+  return query<{ agents: AgentStub[] }>(
+    chain,
+    `agents(first: 20, where: { or: [
+       { registrationFile_: { mcpEndpoint_in: $urls } },
+       { registrationFile_: { webEndpoint_in: $urls } },
+       { registrationFile_: { a2aEndpoint_in: $urls } }
+     ] }) { ${STUB} }`,
+    { urls: candidates },
+    "$urls: [String!]!",
+  );
+}
+
+export function fetchAgentsByOwner(chain: ChainEntry, owner: string) {
+  return query<{ agents: AgentStub[] }>(
+    chain,
+    `agents(first: 20, where: { owner: $owner }, orderBy: createdAt, orderDirection: asc) { ${STUB} }`,
+    { owner: owner.toLowerCase() },
+    "$owner: Bytes!",
+  );
+}

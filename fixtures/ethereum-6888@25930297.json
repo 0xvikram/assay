@@ -1,0 +1,95 @@
+{
+  "agent": {
+    "id": "1:6888",
+    "name": "Minara AI",
+    "owner": "0xb27afb1741aa9be0b924d99b26ebf5577054a138",
+    "wallet": "0xb27afb1741aa9be0b924d99b26ebf5577054a138",
+    "ens": null,
+    "x402Support": true,
+    "registeredDaysAgo": 221
+  },
+  "assessment": {
+    "verdict": "UNPROVEN",
+    "confidence": 0,
+    "headline": "Reputation exists, but nothing about it can be independently verified.",
+    "findings": [
+      {
+        "code": "NO_PAYMENT_PROOF",
+        "severity": "warning",
+        "statement": "No review is backed by a payment anyone can verify on-chain.",
+        "measured": "0 of 148 reviews carry proofOfPaymentTxHash"
+      },
+      {
+        "code": "NO_VALIDATION",
+        "severity": "warning",
+        "statement": "No independent validator has ever attested to this agent.",
+        "measured": "0 entries in the validation registry"
+      },
+      {
+        "code": "UNATTRIBUTED_REVIEWS",
+        "severity": "info",
+        "statement": "No review says which tool or skill it is rating.",
+        "measured": "0 of 148 reviews name an mcpTool"
+      }
+    ],
+    "nextSteps": [
+      "5 more payment-backed reviews from 3 more independent payers — each must carry proofOfPayment (fromAddress, toAddress, chainId, txHash).",
+      "Optional: one validation-registry attestation. Not required for VERIFIED; raises confidence."
+    ]
+  },
+  "signals": {
+    "sample": 148,
+    "revoked": 0,
+    "distinctReviewers": 120,
+    "topReviewerShare": 0.02702702702702703,
+    "topReviewer": "0x668add9213985e7fd613aec87767c892f4b9df1c",
+    "reviewerHHI": 0.01013513513513515,
+    "paymentProofCoverage": 0,
+    "paidFeedback": 0,
+    "paidReviewers": 0,
+    "paidTopReviewerShare": 0,
+    "selfIssued": 0,
+    "distinctScoreValues": 16,
+    "burstShare": 0.6756756756756757,
+    "namedTool": 0,
+    "validations": 0,
+    "validationsPassed": 0,
+    "registrationCompleteness": 0.5555555555555556,
+    "declared": [
+      "name",
+      "description",
+      "a2aEndpoint",
+      "webEndpoint",
+      "supportedTrusts"
+    ],
+    "missing": [
+      "mcpEndpoint",
+      "mcpTools",
+      "ens",
+      "did"
+    ],
+    "ageDays": 221
+  },
+  "provenance": {
+    "chain": "Ethereum",
+    "chainId": 1,
+    "subgraphId": "FV6RR6y13rsnCxBAicKuQEwDp8ioEGiNaWaZUmvr1F8k",
+    "deployment": "QmVX4bwHu8i487Q4FuaKr89rD2neBor67iepomMgXU5SHY",
+    "block": 25930297,
+    "blockTime": "2026-09-08T04:36:23.000Z",
+    "hasIndexingErrors": false,
+    "sampleCap": 1000,
+    "sampleTruncated": false,
+    "readAt": "2026-09-08T04:36:34.847Z",
+    "latencyMs": 1044,
+    "thresholds": {
+      "washTopReviewerShare": 0.6,
+      "concernTopReviewerShare": 0.4,
+      "minPaidReviewers": 3,
+      "minPaidFeedback": 5,
+      "maxPaidTopShare": 0.5,
+      "uniformSampleFloor": 10,
+      "burstShare": 0.8
+    }
+  }
+}

@@ -6,7 +6,8 @@
   "description": "Is this agent's reputation real? A paid pre-flight check for ERC-8004 agents.",
   "scripts": {
     "assay": "tsx src/cli.ts",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "test": "node --import tsx --test \"src/**/*.test.ts\""
   },
   "devDependencies": {
     "@types/node": "^22.10.2",
