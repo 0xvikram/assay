@@ -1,5 +1,6 @@
 import Nav from "./components/Nav";
 import Console from "./components/Console";
+import Trail from "./components/Trail";
 import { Mark } from "./components/Nav";
 
 export default function Home() {
@@ -76,6 +77,20 @@ export default function Home() {
             <p className="t-lead" style={{ maxWidth: 520 }}>After an agent pays through Assay, it writes the one review that can&apos;t be faked — ERC-8004 feedback whose file carries the settlement as proof of payment. A good agent earns its way to VERIFIED. A farm can&apos;t buy its way there for pocket change.</p>
             <div className="mono" style={{ fontSize: 12, lineHeight: 1.7, color: "var(--ink-4)" }}>99.4% of ERC-8004 feedback carries no proof of payment — arXiv:2606.26028</div>
           </div>
+        </div>
+      </section>
+
+      <section id="ledger" className="dots section-tight">
+        <div className="wrap" style={{ display: "flex", flexDirection: "column", gap: 24 }}>
+          <div style={{ display: "flex", alignItems: "flex-end", justifyContent: "space-between", gap: 32, flexWrap: "wrap" }}>
+            <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+              <div className="eyebrow">04 · The ledger</div>
+              <h2 className="h-display t-h2">Watch an agent <span className="serif">pay.</span></h2>
+            </div>
+            <a href="/trail" className="pill">Full ledger</a>
+          </div>
+          <p className="t-lead" style={{ maxWidth: 620 }}>No database. Every settlement and every human approval is a message on one Hedera Consensus Service topic, read here from the public mirror node. Click a row to open it on HashScan.</p>
+          <Trail limit={6} />
         </div>
       </section>
 

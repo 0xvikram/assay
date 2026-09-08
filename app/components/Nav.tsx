@@ -16,6 +16,7 @@ export default function Nav() {
         <Link href="/#console">Console</Link>
         <Link href="/#rails">Rails</Link>
         <Link href="/#receipt">Receipt</Link>
+        <Link href="/trail">Ledger</Link>
         <Link href="/architecture">Architecture</Link>
         <a href="/api/openapi">API</a>
       </div>
