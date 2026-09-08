@@ -49,11 +49,11 @@ export default function Console() {
   }
 
   return (
-    <div className="glass" style={{ display: "flex", flexDirection: "column", gap: 18, padding: 30, boxShadow: "0 40px 90px rgba(0,0,60,0.45)" }}>
+    <div className="glass" style={{ display: "flex", flexDirection: "column", gap: 18, padding: "clamp(18px, 2.2vw, 30px)", boxShadow: "0 40px 90px rgba(0,0,60,0.45)", minWidth: 0 }}>
       <div className="eyebrow" style={{ display: "flex", justifyContent: "space-between", fontSize: 11, letterSpacing: "0.12em" }}>
         <span>Console</span><span>live · The Graph</span>
       </div>
-      <form onSubmit={(e) => { e.preventDefault(); void run(); }} style={{ display: "flex", gap: 10 }}>
+      <form className="console-form" onSubmit={(e) => { e.preventDefault(); void run(); }}>
         <input className="input mono" value={ref} onChange={(e) => setRef(e.target.value)} placeholder="chain:agentId" aria-label="chain:agentId" />
         <button className="btn" disabled={busy}>{busy ? "reading…" : "assay"}</button>
       </form>

@@ -10,7 +10,7 @@ export function Mark({ color = "#FFFFFF" }: { color?: string }) {
 
 export default function Nav() {
   return (
-    <nav style={{ position: "relative", zIndex: 2, display: "flex", alignItems: "center", justifyContent: "space-between", padding: "28px 48px" }}>
+    <nav className="nav wrap" style={{ width: "100%" }}>
       <Link href="/" className="wordmark"><Mark /><span>ASSAY</span></Link>
       <div className="nav-links" style={{ display: "flex", gap: 32, fontSize: 15, color: "var(--ink-2)" }}>
         <Link href="/#console">Console</Link>
