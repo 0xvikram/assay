@@ -1,138 +1,120 @@
 # Assay
 
-**Is this agent's reputation real?**
+**Know who you're paying before you pay them.**
 
-A paid pre-flight check for ERC-8004 agents. Before your agent pays a counterparty
-over x402, ask Assay whether the reputation it is trusting was earned or manufactured.
+A paid pre-flight for agent payments. Before your agent pays another ERC-8004 agent, it asks Assay — over x402 — whether that agent's reputation is real. Assay reads the registries live through The Graph, returns `VERIFIED` / `UNPROVEN` / `WASH_REPUTATION_DETECTED` with the evidence, what would change it, and the exact subgraph deployment and block it was read at — or refuses to guess. After the agent pays, it writes the one review that can't be faked: ERC-8004 feedback whose file carries the settlement as proof of payment.
+
+**Live:** https://assay-dusky.vercel.app · **Ledger:** https://assay-dusky.vercel.app/trail · **OpenAPI:** `/api/openapi` · **MCP:** `/api/mcp`
+
+Built solo for ETHOnline 2026 (Sept 4–16). Everything below is live against mainnet and testnet data; nothing is mocked.
+
+## The problem, in one agent
+
+The #1 agent on Base by review count has **309,734 reviews**. Read live:
 
 ```
-npm install
-cp .env.example .env      # add a Graph gateway key
-npm run assay -- base:25975
+$ npm run assay -- base:25975
+  WASH_REPUTATION_DETECTED   confidence 0/100
+  ✗ 95.5% of 1000 reviews from 0x7cf8286c…3810b
+  ✗ 1 distinct score value across 1000 reviews, 0 payment proofs
+  ✗ 100.0% of reviews inside one 24h window
+  deployment QmcLwgyKn3RnyhkkSwLYscP9dL1Fc6omvfC9bFRgcK1e7u · block 51034437
 ```
 
-## Why
+Independent research ([arXiv:2606.26028](https://arxiv.org/html/2606.26028), July 2026) found 59–91% of reviewers Sybil-flagged and **98.7–100% of all feedback without proof of payment**. The paper measured; nothing changed. Measuring isn't the product.
 
-Measured against the Agent0 ERC-8004 subgraphs on 2026-09-05:
+## What's live (Sept 8)
 
-| Signal | Measured |
+| | Evidence |
 |---|---|
-| Agents registered (Ethereum) | 50,699 |
-| Feedback entries (Ethereum) | 3,371 — one per 15 agents |
-| Validations across Ethereum, Base, BSC, Polygon | **0** |
-| Feedback carrying an on-chain payment proof | 0.7% Base · 2.6% Ethereum · 0% BSC |
-| Reviews naming the tool they rate | 0 |
+| **Hedera x402** — 402 → signed → settled by Blocky402's fee payer | [HashScan tx](https://hashscan.io/testnet/transaction/0.0.7162784%401788858215.582262398) · `docs/evidence/hedera-first-paid-request.md` |
+| **HCS receipts** — every settlement on both rails, no database | [topic 0.0.10419050](https://hashscan.io/testnet/topic/0.0.10419050) · `/trail` |
+| **Arc rail** — Circle Gateway, off-chain signature, no gas | `docs/evidence/arc-paid-request.md` |
+| **Base Sepolia rail** — x402.org, the rail marketplaces pay upstream on | advertised in every 402 |
+| **The receipt** — Assay is [agent #9200](https://sepolia.basescan.org/tx/0xf8bcf0c1e4ac1d7a4cfca6cfbf1410982bfa3367aa989eb497f099a16bc7ffbe); its first payment-backed review [is on-chain](https://sepolia.basescan.org/tx/0xb8238519f39e83ef4d3af9a4e13838a6413f66d3b6c2f745af3f823f8d0998d5) and reads back as 100% proof coverage | `docs/evidence/receipt-loop.md` |
+| **Privy** — treasury wallet bound to a policy owned by a key quorum; stranger transfer refused with `policy_violation` | [allowlisted tx](https://sepolia.basescan.org/tx/0x50beff490104b8a9acac3ab529dcdf381d55e40b5f775170eb9ad60e230e7b43) |
+| **Uniswap** — Trading API quote as the recipe's price step | `FEEDBACK.md` |
+| **MCP** — stdio for Claude Desktop/Cursor, hosted with `@x402/mcp` paid tools | `docs/MCP.md` |
+| **Hedera Harness** — `doctor` verifies the x402 facilitator before a run | [PR #44](https://github.com/hedera-dev/hedera-harness/pull/44) |
+| **World Selfie Check** — the step-up for raising an agent's cap | code live at `/escalate`; sandbox pending — `docs/FEEDBACK-world.md` |
+| **Bazantic** — two gateways registered | `docs/bazantic/README.md` (their edge 404s, reported) |
 
-The registries have identity at scale and essentially no verifiable trust. A naive
-average score — what the registry stats entities return — cannot tell a real agent
-from a farm. **Assay counts only what can be verified.**
+## How it works
 
-## Verdicts
+```
+paying agent ──402→pay→200──▶ Assay (Next.js on Vercel) ──GraphQL+_meta──▶ The Graph (Agent0, 6 chains)
+   │ signs only                 │ REST · MCP · console
+   │                            └─ afterSettle ──▶ HCS topic ──▶ mirror node ──▶ /trail
+   └─ giveFeedback(proofOfPayment) ──▶ ERC-8004 Reputation Registry (Base Sepolia), file on IPFS
+```
 
-| Verdict | Meaning |
-|---|---|
-| `VERIFIED` | Enough payment-backed reviews, from enough independent addresses, with no single one dominating. |
-| `UNPROVEN` | Reputation exists but nothing about it can be independently checked. The common case. |
-| `WASH_REPUTATION_DETECTED` | The signal was manufactured. Findings say exactly how. |
+Read `docs/ARCHITECTURE.md` (or `/architecture`) for the full picture. The rules that make it honest:
 
-Detectors: `SINGLE_SOURCE_REPUTATION`, `UNIFORM_UNPAID_SCORES`, `BURST_TIMED_REVIEWS`,
-`SELF_ISSUED_FEEDBACK`, `NO_PAYMENT_PROOF`, `THIN_PAYMENT_PROOF`, `CONCENTRATED_REVIEWERS`,
-`NO_VALIDATION`, `SPARSE_REGISTRATION`, `UNATTRIBUTED_REVIEWS`.
+- **Provenance or nothing.** Every query carries `_meta`; no pinned deployment and block, no answer.
+- **Confidence is earned** only from reviews backed by verifiable payments from independent addresses. Eleven detectors catch the one-wallet farm and the hundred-wallet, one-afternoon farm. Payment-backed evidence outranks free evidence, so an agent attacked with fake reviews isn't stuck at `WASH`.
+- **Every `UNPROVEN` is a path**: the report ends with what would change it, priced in paid reviews.
+- **Priced by work**: a six-chain corroboration costs four single reads. Settlement only after a successful response.
+- **State lives on Hedera**, not in a database. The action trail is a public ledger.
 
-Thresholds live in one place, `src/score/verdict.ts` — a score whose rules are hidden
-is the problem this service exists to fix.
+## Run it
 
-## Provenance
+```
+cp .env.example .env            # docs/ENV.md walks through every value
+npm ci
+npm run assay -- base:25975      # CLI verdict · add --json
+npm run assay -- --resolve https://mcp.zyf.ai
+npm run assay -- --corroborate base:25975
+npm test && npm run typecheck
+npm run build && npm start       # the site + API on :3000
+```
 
-Every answer names the exact subgraph deployment hash, the block it was read at, the
-indexing-error flag, whether the sample was truncated, and the thresholds applied.
-An answer without that is not evidence.
+Live flows (need funded testnet accounts — see `docs/ENV.md`):
+
+```
+npm run hcs:create-topic                          # the receipt topic
+npm run agent:pay                                 # 402 → pay on Hedera → verdict → mandate decision
+npm run agent:pay -- ethereum:6888 --receipt      # …then write the payment-backed review
+npm run agent:pay-arc -- --deposit 1.00           # same purchase on Arc
+npm run register:self                             # Assay as an ERC-8004 agent
+npm run treasury:setup && npm run treasury:demo   # Privy policy: allowlist passes, stranger refused
+npm run agent:quote -- --chain 8453 --in USDC --out WETH --amount 1000000
+npm run mcp                                       # stdio MCP server
+```
+
+## Routes
+
+| Route | Cost | What |
+|---|---|---|
+| `GET /api/v1/agents/{chain}/{agentId}` | paid | verdict, findings, next steps, signals, provenance |
+| `GET /api/v1/preview/{chain}/{agentId}` | free | verdict + confidence + block |
+| `GET /api/v1/resolve?url=` | paid | which registered agents claim this endpoint |
+| `GET /api/v1/corroborate/{owner or chain:id}` | paid ×4 | the owner across every healthy chain |
+| `GET /api/v1/trail` · `GET /api/v1/mandate/{id}/approvals` | free | the ledger, from the mirror node |
+| `POST /api/mcp` | mixed | Streamable HTTP MCP; `assay_agent` paid, `assay_preview` free |
+| `GET /api/openapi` · `/api/v1/chains` · `/api/healthz` | free | |
+
+Every paid route's 402 offers **three rails**: `hedera:testnet` (Blocky402), `eip155:5042002` Arc (Circle Gateway), `eip155:84532` Base Sepolia (x402.org). Free routes allow 10 requests/min per IP.
 
 ## Adding a chain
 
-Add an entry to `registry/chains.json`. No code changes.
+One row in `registry/chains.json` — key, chain id, Agent0 subgraph id, `healthy`. The engine refuses to answer from unhealthy chains rather than guess.
 
-## Status
-
-Day 3. Scoring engine reads live mainnet data across five deployments.
-Next: x402 gate on Hedera, then the MCP surface.
-
-## Commands
+## Repository
 
 ```
-npm run assay -- base:25975                          # verdict for one agent
-npm run assay -- --resolve https://mcp.zyf.ai        # which agents claim this endpoint?
-npm run assay -- --corroborate base:25975            # the owner, across every healthy chain
-npm run assay -- --fixture fixtures/base-25975@51026420.json   # pinned replay; prints source: fixture
-npm test · npm run typecheck
+src/engine/       pure TypeScript: graph client, signals, detectors, verdict, resolve, corroborate
+src/x402.ts       the gate: three facilitators, tiers, the settle→HCS hook
+src/hcs.ts        receipts, approvals, mirror-node reads
+src/agent/        the reference paying agent, the mandate, the receipt writer, the Arc buyer, the quote
+src/treasury/     Privy policy-bound wallet
+src/mcp/ bin/     MCP tools, stdio server
+app/              Next.js 16: console, /trail, /escalate, /architecture, /api/*
+docs/             PLAN, ARCHITECTURE, ENV, MCP, DEMO, evidence/, bazantic/, FEEDBACK-world
+fixtures/         pinned snapshots (block in filename); --fixture replays announce themselves
 ```
 
-Every report ends with **what would change the verdict**, priced in payment-backed
-reviews. `UNPROVEN` is a path, not a punishment. Payment-backed evidence outranks
-free evidence: an agent attacked with manufactured reviews is not stuck at `WASH`
-if its paid reviews stand on their own.
+## Feedback documents
 
-`fixtures/` holds pinned snapshots (block number in the filename) so the demo
-survives the farm going quiet. A replay always announces itself as a fixture.
+`FEEDBACK.md` (Uniswap) · `docs/FEEDBACK-world.md` (World) · `docs/bazantic/README.md` (Bazantic) · [hedera-harness PR #44](https://github.com/hedera-dev/hedera-harness/pull/44)
 
-## Live
-
-**https://assay-dusky.vercel.app** — console, `/api/*`, `/api/mcp`, `/architecture`.
-
-## Run the service
-
-```
-npm run build && npm start          # Next.js 16, all routes under /api
-curl localhost:3000/api/healthz
-curl localhost:3000/api/v1/preview/base/25975
-```
-
-| Route | What |
-|---|---|
-| `GET /api/v1/agents/{chain}/{agentId}` | full report: verdict, findings, next steps, signals, provenance |
-| `GET /api/v1/preview/{chain}/{agentId}` | verdict + confidence only — the free tier |
-| `GET /api/v1/resolve?url=` | which registered agents claim this endpoint |
-| `GET /api/v1/corroborate/{owner or chain:agentId}` | the same owner across every healthy chain |
-| `GET /api/v1/chains` · `GET /api/healthz` · `GET /api/openapi` | registry · liveness · OpenAPI 3.1 |
-
-Free routes allow 10 requests a minute per IP. Every route declares `runtime = "nodejs"`
-and `maxDuration = 60`; the engine fans out to chains in parallel, never in a loop.
-
-### Deploy (Vercel Hobby)
-
-1. `vercel.com/new` → import `0xvikram/assay` from your **personal** GitHub account
-   (Hobby cannot link organisation repos). Framework is detected as Next.js; no settings to change.
-2. Environment variables: `GRAPH_API_KEY` (required), `PUBLIC_BASE_URL` (the deployment URL,
-   used as the `servers` entry in `/api/openapi`).
-3. Deploy. Every push to `master` redeploys.
-
-## Use from Claude / Cursor (MCP)
-
-```
-npm run mcp                       # stdio server, free, runs on your GRAPH_API_KEY
-```
-Hosted: point any MCP client at `https://<host>/api/mcp` — `assay_agent` costs HBAR over
-x402, `assay_preview` is free. Config snippets and a paying client in [docs/MCP.md](docs/MCP.md).
-
-## Two rails, one engine
-
-Every paid route's `402` lists two ways to pay and the client picks:
-
-| Rail | Network | Facilitator | Client |
-|---|---|---|---|
-| Hedera testnet | `hedera:testnet` | Blocky402 (`api.testnet.blocky402.com`) — verifies and settles, pays the network fee | `npm run agent:pay` |
-| Arc testnet | `eip155:5042002` | Circle Gateway (`gateway-api-testnet.circle.com`) — off-chain signatures, batched settlement, no gas | `npm run agent:pay-arc [--deposit 1.00]` |
-
-Prices are the same tiers on both: a cross-chain corroboration costs four single reads.
-Settled calls on either rail leave a receipt on the HCS topic.
-
-## Uniswap
-
-The pre-flight recipe's quote step calls the Trading API (`src/agent/quote.ts`,
-`npm run agent:quote -- --chain 8453 --in USDC --out WETH --amount 1000000`). Nothing is
-executed — the mandate decides. Developer feedback with exact doc pages: [FEEDBACK.md](FEEDBACK.md).
-
-## Bazantic
-
-Two gateways (Assay via `/api/openapi`; Sourcify via its published OpenAPI) and two recipes:
-[docs/bazantic/README.md](docs/bazantic/README.md).
+MIT.
