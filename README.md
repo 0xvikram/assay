@@ -75,6 +75,10 @@ if its paid reviews stand on their own.
 `fixtures/` holds pinned snapshots (block number in the filename) so the demo
 survives the farm going quiet. A replay always announces itself as a fixture.
 
+## Live
+
+**https://assay-dusky.vercel.app** — console, `/api/*`, `/api/mcp`, `/architecture`.
+
 ## Run the service
 
 ```

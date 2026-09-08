@@ -314,7 +314,7 @@ Do these before writing code; each has lead time and none of it is parallelisabl
 - [ ] Hedera: `portal.hedera.com` → two **ECDSA** testnet accounts. Save as `HEDERA_AGENT_ACCOUNT_ID/PRIVATE_KEY` and `HEDERA_SERVICE_ACCOUNT_ID/PRIVATE_KEY`. Fund HBAR from the portal.
 - [ ] Circle: `faucet.circle.com` → Arc testnet USDC to a fresh EVM key (`ARC_BUYER_PRIVATE_KEY`); a second address for `ARC_SELLER_ADDRESS`. Optionally Hedera-testnet USDC too.
 - [ ] Privy: `dashboard.privy.io` → app → `PRIVY_APP_ID`, `PRIVY_APP_SECRET`; create an authorization key (`PRIVY_AUTHORIZATION_KEY`).
-- [x] Hosting: **Vercel Hobby** — decided Sept 8. Sign in with GitHub, keep `assay` on your personal account (Hobby cannot link Git-org repos). No card.
+- [x] Hosting: **Vercel Hobby** — deployed Sept 8 via CLI: **https://assay-dusky.vercel.app** (project `assay`, `GRAPH_API_KEY` + `PUBLIC_BASE_URL` set in production env).
 - [ ] Bazantic: account exists. Note your username here: ________.
 - [ ] Uniswap developer platform account (`developers.uniswap.org/dashboard`) → API key.
 - [x] **Decision:** external non-sponsor API for Bazantic "Agentify" — **Sourcify** (decided Sep 8). It publishes OpenAPI at `https://sourcify.dev/server/api-docs/openapi.json` (verified 200), so `baz gateway add --spec-url` can ingest it directly — no hand-written spec. Recipe question: *is the counterparty's contract verified?* (`GET /v2/contract/{chainId}/{address}`).
@@ -341,7 +341,7 @@ Paste each *Opus brief* into Claude Code from the repo root. Each brief assumes 
 - `npm run assay -- --resolve https://<some mcpEndpoint from a Base registration>` returns at least one agent.
 - Three fixture files exist with block numbers in their names.
 
-### Phase B — Next.js app + Vercel deploy (Sep 9) — ✅ code Sep 8 `5c731e5`; ⏳ hosted URL (Vercel import)
+### Phase B — Next.js app + Vercel deploy (Sep 9) — ✅ done Sep 8; live at https://assay-dusky.vercel.app
 
 **Opus brief**
 > Add Next.js 16 (App Router, TypeScript) **in this repo, at the root** — one deployable, per §2. `npx create-next-app` into a temp dir and merge, or hand-write `app/` and add `next react react-dom`; do not create a `web/` subfolder and do not touch `src/engine`, which stays framework-free and importable from route handlers via the `@/` alias.

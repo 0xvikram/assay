@@ -1,5 +1,7 @@
 # Assay — the pitch
 
+Live: **https://assay-dusky.vercel.app** · source: https://github.com/0xvikram/assay
+
 Short enough to say out loud. Long enough that a sponsor mentor can tell what to help with.
 
 ## One breath
