@@ -438,7 +438,7 @@ Paste each *Opus brief* into Claude Code from the repo root. Each brief assumes 
 - `FEEDBACK.md` committed, form submitted (screenshot saved).
 - PR URL in README.
 
-### Phase J — videos, README, submission (Sep 15 pm – 16) — shot lists in `docs/DEMO.md`
+### Phase J — videos, README, submission (Sep 15 pm – 16) — README final ✅ Sep 8; `/trail` ledger ✅; shot lists in `docs/DEMO.md`; ⏳ videos, submission form
 
 Two cuts, scripted in `docs/demo/SCRIPT.md`:
 - **≤ 5 min (Hedera / Arc / Privy):** problem (30 s: the 309k-review farm) → 402 → paid → 200 with HashScan → HCS receipt → agent refuses WASH → step-up via Selfie Check → Privy policy blocks over-cap → architecture.
