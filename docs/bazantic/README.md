@@ -8,6 +8,23 @@ external, non-sponsor API. Grants settle on **Base**.
 Prerequisites: `npm i -g @bazantic/cli`, a Bazantic account, and the hosted Assay URL.
 **Put the Bazantic username in the ETHGlobal submission** — without it the entry cannot be attributed.
 
+## Status (2026-09-08 15:20)
+
+| Gateway | Slug | Status | Endpoint |
+|---|---|---|---|
+| assay | `fjjyd5hmivfipfh4boepxbwptu` | **active** | https://fjjyd5hmivfipfh4boepxbwptu.bazgateway.com |
+| assay (first attempt) | `7btlbq7n6nh3dm36ugrbopkuba` | draft | — |
+| sourcify | `md2n3ty64rhb3a67bif77ueuhm` | draft | https://md2n3ty64rhb3a67bif77ueuhm.bazgateway.com |
+
+**Blocked on Bazantic:** every `*.bazgateway.com` host — draft or active, REST path or `/mcp` — returns
+`404 page not found` from Fly's edge (`server: Fly/…`, `via: 2 fly.io`). The subdomains are not
+routed yet. Also, `baz curl` against our origin fails with `unsupported x402 version: undefined`
+even with `--x402-version 2`: the CLI reads `x402Version` from the 402 *body*, while x402 v2
+carries `PaymentRequired` in the `PAYMENT-REQUIRED` header (body `{}`). Raised in the sponsor channel.
+
+**Ready on our side:** the routes accept `eip155:84532` (Base Sepolia USDC via x402.org) precisely so
+Bazantic's gateway can pay upstream; the local Bazantic wallet `0x06e22C1d…0458` holds 20 test USDC.
+
 ## Registered (2026-09-08)
 
 | Gateway | Slug | MCP |
