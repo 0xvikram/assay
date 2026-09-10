@@ -14,6 +14,7 @@ export interface RawFeedback {
     proofOfPaymentTxHash: string | null;
     proofOfPaymentChainId: string | null;
     proofOfPaymentFromAddress: string | null;
+    proofOfPaymentToAddress: string | null;
     mcpTool: string | null;
     text: string | null;
   } | null;
@@ -67,7 +68,7 @@ const AGENT_BODY = `
     feedback(first: $first, orderBy: createdAt, orderDirection: desc) {
       id clientAddress value tag1 tag2 isRevoked createdAt
       feedbackFile {
-        proofOfPaymentTxHash proofOfPaymentChainId proofOfPaymentFromAddress mcpTool text
+        proofOfPaymentTxHash proofOfPaymentChainId proofOfPaymentFromAddress proofOfPaymentToAddress mcpTool text
       }
     }
   }`;

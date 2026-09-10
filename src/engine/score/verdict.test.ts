@@ -7,8 +7,8 @@ import { assess, THRESHOLDS } from "./verdict";
 const OWNER = "0x1111111111111111111111111111111111111111";
 const T0 = 1_750_000_000;
 
-function review(i: number, opts: Partial<RawFeedback> & { paidTx?: string } = {}): RawFeedback {
-  const { paidTx, ...rest } = opts;
+function review(i: number, opts: Partial<RawFeedback> & { paidTx?: string; payer?: string; payee?: string } = {}): RawFeedback {
+  const { paidTx, payer, payee, ...rest } = opts;
   return {
     id: `f${i}`,
     clientAddress: `0x${(i + 2).toString(16).padStart(40, "0")}`,
@@ -18,7 +18,7 @@ function review(i: number, opts: Partial<RawFeedback> & { paidTx?: string } = {}
     isRevoked: false,
     createdAt: String(T0 + i * 3 * 86_400),
     feedbackFile: paidTx
-      ? { proofOfPaymentTxHash: paidTx, proofOfPaymentChainId: "296", proofOfPaymentFromAddress: null, mcpTool: "check", text: null }
+      ? { proofOfPaymentTxHash: paidTx, proofOfPaymentChainId: "296", proofOfPaymentFromAddress: payer ?? null, proofOfPaymentToAddress: payee ?? null, mcpTool: "check", text: null }
       : null,
     ...rest,
   };
@@ -91,4 +91,54 @@ test("one payment-backed review from one payer is unproven, not wash", () => {
   assert.equal(a.verdict, "UNPROVEN");
   assert.ok(a.findings.some((f) => f.code === "THIN_SAMPLE"));
   assert.ok(!a.findings.some((f) => f.severity === "critical"));
+});
+
+const addr = (n: number) => `0x${n.toString(16).padStart(40, "0")}`;
+const WALLET = addr(0xbeef);
+
+test("an agent paying itself is not proof of payment, and it stays damning", () => {
+  const genuine = [0, 1, 2, 0, 1, 2].map((p, i) => review(2000 + i, { clientAddress: addr(0xc0 + p), paidTx: `0xg${i}`, payer: addr(0xd0 + p) }));
+  const bought = [review(3000, { clientAddress: addr(0xe1), paidTx: "0xself", payer: OWNER })];
+  const a = assess(computeSignals(agent([...genuine, ...bought])));
+  assert.equal(a.verdict, "WASH_REPUTATION_DETECTED");
+  assert.ok(a.findings.some((f) => f.code === "SELF_PAID_PROOF" && f.severity === "critical"));
+  assert.ok(a.nextSteps.some((x) => x.includes("never proof")));
+});
+
+test("one transaction cited by many reviews is counted once", () => {
+  const fb = Array.from({ length: 5 }, (_, i) => review(4000 + i, { clientAddress: addr(0xa0 + i), paidTx: "0xsame", payer: addr(0xa0 + i) }));
+  const s = computeSignals(agent(fb));
+  assert.equal(s.paidFeedback, 1);
+  assert.equal(s.reusedProofs, 4);
+  const a = assess(s);
+  assert.equal(a.verdict, "UNPROVEN");
+  assert.ok(a.findings.some((f) => f.code === "REUSED_PAYMENT_PROOF"));
+});
+
+test("many reviewers paid for by one wallet do not earn VERIFIED", () => {
+  const ring = Array.from({ length: 6 }, (_, i) => review(5000 + i, { clientAddress: addr(0xb0 + i), paidTx: `0xr${i}`, payer: addr(0x999) }));
+  const s = computeSignals(agent(ring));
+  assert.equal(s.paidReviewers, 6);
+  assert.equal(s.paidPayers, 1);
+  const a = assess(s);
+  assert.equal(a.verdict, "UNPROVEN");
+  assert.ok(a.findings.some((f) => f.code === "SINGLE_PAYER_REVIEWS"));
+  assert.ok(a.nextSteps.some((x) => x.startsWith("Spread who pays")));
+});
+
+test("paying yourself once does not soften a burst", () => {
+  const a = assess(computeSignals(agent([...farm(), review(6000, { clientAddress: addr(0xe2), paidTx: "0xonce", payer: OWNER })])));
+  assert.equal(a.verdict, "WASH_REPUTATION_DETECTED");
+  assert.ok(a.findings.some((f) => f.code === "BURST_TIMED_REVIEWS" && f.severity === "critical"));
+});
+
+test("a proof paying someone else is not counted, but a cross-chain recipient is fine", () => {
+  const elsewhere = [0, 1, 2, 3, 4, 5].map((p) => review(7000 + p, { clientAddress: addr(0xf0 + p), paidTx: `0xe${p}`, payer: addr(0xf0 + p), payee: addr(0x1234) }));
+  const s1 = computeSignals(agent(elsewhere, { agentWallet: WALLET }));
+  assert.equal(s1.proofsToOthers, 6);
+  assert.equal(assess(s1).verdict, "UNPROVEN");
+  const hedera = [0, 1, 2, 3, 4, 5].map((p) => review(8000 + p, { clientAddress: addr(0xf0 + p), paidTx: `0xh${p}`, payer: addr(0xf0 + p), payee: "0.0.10417408" }));
+  const s2 = computeSignals(agent(hedera, { agentWallet: WALLET }));
+  assert.equal(s2.proofsToOthers, 0);
+  assert.equal(assess(s2).verdict, "VERIFIED");
 });

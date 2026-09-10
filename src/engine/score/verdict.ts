@@ -68,6 +68,14 @@ export function assess(s: Signals): Assessment {
       measured: `${pct(s.burstShare)} of reviews inside one 24h window`,
     });
   }
+  if (s.selfPaid > 0) {
+    f.push({
+      code: "SELF_PAID_PROOF",
+      severity: "critical",
+      statement: "The agent paid itself to manufacture proof of payment.",
+      measured: `${s.selfPaid} review${s.selfPaid === 1 ? "" : "s"} cite a payment from the agent's own owner or wallet — not counted`,
+    });
+  }
   if (s.selfIssued > 0) {
     f.push({
       code: "SELF_ISSUED_FEEDBACK",
@@ -98,6 +106,30 @@ export function assess(s: Signals): Assessment {
       severity: "warning",
       statement: "Too few payment-backed reviews to stand on.",
       measured: `${s.paidFeedback} paid of ${s.sample} (${pct(s.paymentProofCoverage)})`,
+    });
+  }
+  if (s.reusedProofs > 0) {
+    f.push({
+      code: "REUSED_PAYMENT_PROOF",
+      severity: "warning",
+      statement: "One payment is cited as proof for several reviews.",
+      measured: `${s.reusedProofs} review${s.reusedProofs === 1 ? "" : "s"} reuse a transaction already cited — each transaction counted once`,
+    });
+  }
+  if (s.proofsToOthers > 0) {
+    f.push({
+      code: "PAYMENT_TO_ANOTHER_ADDRESS",
+      severity: "warning",
+      statement: "Some payment proofs paid someone other than this agent.",
+      measured: `${s.proofsToOthers} proof${s.proofsToOthers === 1 ? "" : "s"} name a recipient that is not the agent's declared wallet — not counted`,
+    });
+  }
+  if (s.paidFeedback >= THRESHOLDS.minPaidFeedback && s.paidTopPayerShare > THRESHOLDS.maxPaidTopShare) {
+    f.push({
+      code: "SINGLE_PAYER_REVIEWS",
+      severity: "warning",
+      statement: "Payment-backed reviews trace back to one payer.",
+      measured: `${pct(s.paidTopPayerShare)} of paid reviews were paid for by ${s.topPayer}, across ${s.paidReviewers} reviewer addresses`,
     });
   }
   if (s.sample >= THRESHOLDS.uniformSampleFloor && s.topReviewerShare >= THRESHOLDS.concernTopReviewerShare
@@ -144,17 +176,22 @@ export function assess(s: Signals): Assessment {
 
   // ---- verdict ------------------------------------------------------------
   const critical = f.filter((x) => x.severity === "critical");
+  // Independence has to hold for payers as well as reviewers: five reviewer
+  // addresses paid for by one wallet are one opinion bought five times.
   const earned =
     s.paidReviewers >= THRESHOLDS.minPaidReviewers &&
+    s.paidPayers >= THRESHOLDS.minPaidReviewers &&
     s.paidFeedback >= THRESHOLDS.minPaidFeedback &&
-    s.paidTopReviewerShare <= THRESHOLDS.maxPaidTopShare;
+    s.paidTopReviewerShare <= THRESHOLDS.maxPaidTopShare &&
+    s.paidTopPayerShare <= THRESHOLDS.maxPaidTopShare;
 
   // Anyone may write free feedback about any agent — including an attacker who
   // wants a good agent to look like a farm. Payment-backed evidence outranks
   // free evidence: when the paid population stands on its own, manufactured
-  // unpaid reviews are noise to report, not a verdict. Self-issued feedback is
-  // the one signal that stays damning, because the agent wrote it itself.
-  const selfIssued = critical.some((x) => x.code === "SELF_ISSUED_FEEDBACK");
+  // unpaid reviews are noise to report, not a verdict. Self-dealing is the one
+  // signal that stays damning: reviews the agent wrote itself, or proof of
+  // payment it bought from itself.
+  const selfIssued = critical.some((x) => x.code === "SELF_ISSUED_FEEDBACK" || x.code === "SELF_PAID_PROOF");
   const outranked = earned && !selfIssued && critical.length > 0;
   if (outranked) {
     for (const x of critical) x.severity = "warning";
@@ -162,7 +199,7 @@ export function assess(s: Signals): Assessment {
       code: "UNPAID_NOISE_OUTRANKED",
       severity: "info",
       statement: "Manufactured unpaid reviews are present but outranked by payment-backed evidence.",
-      measured: `${s.paidFeedback} paid reviews from ${s.paidReviewers} independent payers stand on their own`,
+      measured: `${s.paidFeedback} paid reviews from ${s.paidPayers} independent payers stand on their own`,
     });
   }
 
@@ -173,7 +210,7 @@ export function assess(s: Signals): Assessment {
     headline = critical[0]!.statement;
   } else if (earned) {
     verdict = "VERIFIED";
-    headline = `${s.paidFeedback} payment-backed reviews from ${s.paidReviewers} independent addresses.`;
+    headline = `${s.paidFeedback} payment-backed reviews from ${s.paidPayers} independent payers.`;
   } else {
     verdict = "UNPROVEN";
     headline = s.sample === 0
@@ -187,8 +224,8 @@ export function assess(s: Signals): Assessment {
   let confidence = 0;
   if (verdict === "VERIFIED") {
     const depth = Math.min(1, s.paidFeedback / 25);
-    const spread = Math.min(1, s.paidReviewers / 10);
-    const independence = 1 - s.paidTopReviewerShare;
+    const spread = Math.min(1, Math.min(s.paidReviewers, s.paidPayers) / 10);
+    const independence = 1 - Math.max(s.paidTopReviewerShare, s.paidTopPayerShare);
     confidence = Math.round(100 * (0.4 * depth + 0.35 * spread + 0.25 * independence));
     if (outranked) confidence = Math.round(confidence / 2);
   } else if (verdict === "UNPROVEN") {
@@ -209,17 +246,23 @@ function nextSteps(s: Signals, verdict: Verdict, selfIssued: boolean): string[] 
   const out: string[] = [];
   const n = (k: number, one: string, many: string) => `${k} ${k === 1 ? one : many}`;
 
-  if (selfIssued) {
+  if (s.selfIssued > 0) {
     out.push("Revoke the self-issued reviews from the writing address (revokeFeedback); this verdict does not lift while they stand.");
   }
+  if (s.selfPaid > 0) {
+    out.push("A payment from the agent's own owner or wallet is never proof. This verdict does not lift while reviews cite one.");
+  }
   const needPaid = Math.max(0, THRESHOLDS.minPaidFeedback - s.paidFeedback);
-  const needPayers = Math.max(0, THRESHOLDS.minPaidReviewers - s.paidReviewers);
+  const needPayers = Math.max(0, THRESHOLDS.minPaidReviewers - Math.min(s.paidReviewers, s.paidPayers));
   if (needPaid > 0 || needPayers > 0) {
     const from = needPayers > 0 ? ` from ${n(needPayers, "more independent payer", "more independent payers")}` : "";
     out.push(`${n(needPaid, "more payment-backed review", "more payment-backed reviews")}${from} — each must carry proofOfPayment (fromAddress, toAddress, chainId, txHash).`);
   }
   if (s.paidFeedback > 0 && s.paidTopReviewerShare > THRESHOLDS.maxPaidTopShare) {
-    out.push(`Spread the paid reviews: one payer wrote ${pct(s.paidTopReviewerShare)} of them; the ceiling is ${pct(THRESHOLDS.maxPaidTopShare)}.`);
+    out.push(`Spread the paid reviews: one reviewer wrote ${pct(s.paidTopReviewerShare)} of them; the ceiling is ${pct(THRESHOLDS.maxPaidTopShare)}.`);
+  }
+  if (s.paidFeedback > 0 && s.paidTopPayerShare > THRESHOLDS.maxPaidTopShare) {
+    out.push(`Spread who pays: one wallet paid for ${pct(s.paidTopPayerShare)} of the paid reviews; the ceiling is ${pct(THRESHOLDS.maxPaidTopShare)}.`);
   }
   if (s.registrationCompleteness < 0.5) {
     out.push(`Complete the registration file — missing ${s.missing.join(", ")}.`);
@@ -228,7 +271,7 @@ function nextSteps(s: Signals, verdict: Verdict, selfIssued: boolean): string[] 
     out.push("Optional: one validation-registry attestation. Not required for VERIFIED; raises confidence.");
   }
   if (verdict === "VERIFIED") {
-    out.unshift(`Confidence grows with depth (${s.paidFeedback}/25 paid reviews) and spread (${s.paidReviewers}/10 independent payers).`);
+    out.unshift(`Confidence grows with depth (${s.paidFeedback}/25 paid reviews) and spread (${Math.min(s.paidReviewers, s.paidPayers)}/10 independent payers).`);
   }
   return out;
 }

@@ -17,6 +17,17 @@ export interface Signals {
   paidReviewers: number;
   /** Concentration recomputed over payment-backed feedback only. */
   paidTopReviewerShare: number;
+  /** Distinct wallets that paid for the valid payment-backed reviews. */
+  paidPayers: number;
+  /** Concentration over payers, not reviewers: a sybil ring is many reviewers and one wallet paying. */
+  paidTopPayerShare: number;
+  topPayer: string | null;
+  /** Reviews citing a payment the agent's own owner or wallet made — manufactured proof. */
+  selfPaid: number;
+  /** Reviews beyond the first that cite a transaction already cited. */
+  reusedProofs: number;
+  /** Proofs paying an EVM address the agent does not own, when the agent declares a wallet. */
+  proofsToOthers: number;
   /** Reviews whose author is the agent's own owner or wallet. */
   selfIssued: number;
   distinctScoreValues: number;
@@ -52,17 +63,46 @@ export function computeSignals(agent: RawAgent): Signals {
   let topCount = 0;
   for (const [addr, c] of byReviewer) if (c > topCount) { topCount = c; topReviewer = addr; }
 
+  const owned = new Set([agent.owner?.toLowerCase(), agent.agentWallet?.toLowerCase()].filter(Boolean) as string[]);
+  const isEvm = (a: string | null) => a !== null && /^0x[0-9a-f]{40}$/.test(a);
+
+  // A proof of payment is only evidence if someone independent actually paid
+  // this agent, once. Each proof is classified before it is counted, so that a
+  // farm cannot manufacture one by paying itself, citing one transaction many
+  // times, or attaching a payment that went to somebody else.
   const hasPayment = (f: RawFeedback) => Boolean(f.feedbackFile?.proofOfPaymentTxHash);
-  const paid = live.filter(hasPayment);
+  const seenTx = new Set<string>();
+  let selfPaid = 0, reusedProofs = 0, proofsToOthers = 0;
+  const paid: RawFeedback[] = [];
+  for (const f of live.filter(hasPayment)) {
+    const ff = f.feedbackFile!;
+    const tx = ff.proofOfPaymentTxHash!.toLowerCase();
+    const from = ff.proofOfPaymentFromAddress?.toLowerCase() ?? null;
+    const to = ff.proofOfPaymentToAddress?.toLowerCase() ?? null;
+    if (from && owned.has(from)) { selfPaid++; continue; }
+    if (seenTx.has(tx)) { reusedProofs++; continue; }
+    seenTx.add(tx);
+    // Cross-chain payments land on accounts a registration cannot list — a
+    // Hedera account, say — so only an EVM recipient checked against a
+    // declared wallet says anything. Our own receipts pay a Hedera account.
+    if (agent.agentWallet && isEvm(to) && !owned.has(to!)) { proofsToOthers++; continue; }
+    paid.push(f);
+  }
 
   const paidByReviewer = new Map<string, number>();
+  const paidByPayer = new Map<string, number>();
   for (const f of paid) {
-    const k = f.clientAddress.toLowerCase();
-    paidByReviewer.set(k, (paidByReviewer.get(k) ?? 0) + 1);
+    const reviewer = f.clientAddress.toLowerCase();
+    // A proof that names no payer is attributed to its reviewer: we cannot
+    // show those two are different, so we do not assume they are.
+    const payer = (f.feedbackFile!.proofOfPaymentFromAddress ?? f.clientAddress).toLowerCase();
+    paidByReviewer.set(reviewer, (paidByReviewer.get(reviewer) ?? 0) + 1);
+    paidByPayer.set(payer, (paidByPayer.get(payer) ?? 0) + 1);
   }
   const paidTop = paid.length ? Math.max(...paidByReviewer.values()) / paid.length : 0;
-
-  const owned = new Set([agent.owner?.toLowerCase(), agent.agentWallet?.toLowerCase()].filter(Boolean) as string[]);
+  let topPayer: string | null = null;
+  let topPayerCount = 0;
+  for (const [addr, c] of paidByPayer) if (c > topPayerCount) { topPayerCount = c; topPayer = addr; }
   const selfIssued = live.filter((f) => owned.has(f.clientAddress.toLowerCase())).length;
 
   const values = new Set(live.map((f) => f.value ?? "").filter((v) => v !== ""));
@@ -103,6 +143,12 @@ export function computeSignals(agent: RawAgent): Signals {
     paidFeedback: paid.length,
     paidReviewers: paidByReviewer.size,
     paidTopReviewerShare: paidTop,
+    paidPayers: paidByPayer.size,
+    paidTopPayerShare: paid.length ? topPayerCount / paid.length : 0,
+    topPayer,
+    selfPaid,
+    reusedProofs,
+    proofsToOthers,
     selfIssued,
     distinctScoreValues: values.size,
     burstShare: n ? burst / n : 0,
