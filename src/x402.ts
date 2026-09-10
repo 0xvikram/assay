@@ -85,6 +85,30 @@ function takeOutcome(payload: unknown): Outcome | undefined {
   return hit?.outcome;
 }
 
+/**
+ * Pin a facilitator to the networks it is meant to settle. The resource server
+ * routes each network and scheme to the first facilitator that claims it, and
+ * the three we use overlap: Circle claims Base Sepolia and eleven other EVM
+ * testnets, x402.org claims Hedera, and Circle and Blocky402 both claim Polygon
+ * Amoy. Left unscoped, array order decided which facilitator got which payments
+ * — and it handed every Base Sepolia payment to Circle's batch facilitator,
+ * which cannot settle a plain EIP-3009 transfer and answered unsupported_scheme.
+ * The rail was advertised in every 402 and never once settled. Each client now
+ * claims only its own rail, so no future addition to a facilitator's list can
+ * take one over.
+ */
+function scoped(client: FacilitatorClient, networks: string[]): FacilitatorClient {
+  const allowed = new Set(networks);
+  return {
+    verify: (payload, requirements) => client.verify(payload, requirements),
+    settle: (payload, requirements) => client.settle(payload, requirements),
+    getSupported: async () => {
+      const s = await client.getSupported();
+      return { ...s, kinds: s.kinds.filter((k) => allowed.has(k.network)) };
+    },
+  };
+}
+
 let server: x402ResourceServer | null = null;
 
 export function resourceServer(): x402ResourceServer {
@@ -95,12 +119,13 @@ export function resourceServer(): x402ResourceServer {
   // ResourceInfo.description optional where @x402/core 2.25 requires it — a
   // declaration drift, not a runtime one. Cast at this one boundary.
   const circle = new BatchFacilitatorClient({ url: ARC_GATEWAY_URL }) as unknown as FacilitatorClient;
-  // Three rails, one engine: Blocky402 settles Hedera; Circle Gateway batches Arc;
-  // x402.org settles Base Sepolia, which is where Bazantic pays from.
+  // Three rails, one engine, and each facilitator scoped to exactly one of them:
+  // Blocky402 settles Hedera, Circle Gateway batches Arc, x402.org settles Base
+  // Sepolia. Routing is now explicit rather than an accident of array order.
   server = new x402ResourceServer([
-    new HTTPFacilitatorClient({ url: FACILITATOR_URL }),
-    circle,
-    new HTTPFacilitatorClient({ url: X402_ORG_FACILITATOR_URL }),
+    scoped(new HTTPFacilitatorClient({ url: FACILITATOR_URL }), [NETWORK]),
+    scoped(circle, [ARC_NETWORK]),
+    scoped(new HTTPFacilitatorClient({ url: X402_ORG_FACILITATOR_URL }), [BASE_SEPOLIA_NETWORK]),
   ])
     .register("hedera:*", new ExactHederaScheme({ defaultAssets: { [NETWORK]: { asset: USDC_TESTNET, decimals: 6 } } }))
     .register(ARC_NETWORK, new GatewayEvmScheme())
