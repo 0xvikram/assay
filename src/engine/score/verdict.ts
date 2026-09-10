@@ -31,6 +31,8 @@ export const THRESHOLDS = {
   maxPaidTopShare: 0.50,
   uniformSampleFloor: 10,
   burstShare: 0.80,
+  /** An independent validator's 0–100 response at or above this is a pass. Evidence only; it never moves confidence. */
+  validationPassScore: 50,
 };
 
 const pct = (x: number) => `${(x * 100).toFixed(1)}%`;
@@ -141,13 +143,44 @@ export function assess(s: Signals): Assessment {
       measured: `${pct(s.topReviewerShare)} from one address, HHI ${s.reviewerHHI.toFixed(2)}`,
     });
   }
-  if (s.validations === 0) {
+  // Validation is reported as evidence beside the verdict and never feeds
+  // confidence: that is earned only from payment-backed, independent reviews.
+  if (s.independentValidations === 0) {
     f.push({
       code: "NO_VALIDATION",
       severity: "warning",
       statement: "No independent validator has ever attested to this agent.",
-      measured: "0 entries in the validation registry",
+      measured: s.selfValidated > 0
+        ? `${s.selfValidated} attestation${s.selfValidated === 1 ? "" : "s"} in the validation registry, all from the agent itself`
+        : "0 entries in the validation registry",
     });
+  }
+  if (s.selfValidated > 0) {
+    f.push({
+      code: "SELF_VALIDATED",
+      severity: "warning",
+      statement: "The agent's own owner or wallet attested to it.",
+      measured: `${s.selfValidated} self-attestation${s.selfValidated === 1 ? "" : "s"} — not independent, not counted`,
+    });
+  }
+  if (s.independentValidations > 0) {
+    const passed = s.independentResponses.filter((r) => r >= THRESHOLDS.validationPassScore).length;
+    const failed = s.independentResponses.length - passed;
+    const pending = s.independentValidations - s.independentResponses.length;
+    f.push({
+      code: "INDEPENDENTLY_VALIDATED",
+      severity: "info",
+      statement: "Independent validators have attested to this agent.",
+      measured: `${s.independentValidations} from validators it does not control: ${passed} passed, ${failed} failed, ${pending} pending — evidence, not counted toward confidence`,
+    });
+    if (failed > 0) {
+      f.push({
+        code: "VALIDATION_FAILED",
+        severity: "warning",
+        statement: "An independent validator scored this agent below the pass mark.",
+        measured: `${failed} of ${s.independentResponses.length} responses below ${THRESHOLDS.validationPassScore}/100`,
+      });
+    }
   }
   if (s.registrationCompleteness < 0.5) {
     f.push({
@@ -267,8 +300,8 @@ function nextSteps(s: Signals, verdict: Verdict, selfIssued: boolean): string[] 
   if (s.registrationCompleteness < 0.5) {
     out.push(`Complete the registration file — missing ${s.missing.join(", ")}.`);
   }
-  if (s.validations === 0) {
-    out.push("Optional: one validation-registry attestation. Not required for VERIFIED; raises confidence.");
+  if (s.independentValidations === 0) {
+    out.push("Optional: an attestation from an independent validator. Reported as evidence beside the verdict; confidence still comes only from payment-backed reviews.");
   }
   if (verdict === "VERIFIED") {
     out.unshift(`Confidence grows with depth (${s.paidFeedback}/25 paid reviews) and spread (${Math.min(s.paidReviewers, s.paidPayers)}/10 independent payers).`);

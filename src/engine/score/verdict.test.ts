@@ -142,3 +142,33 @@ test("a proof paying someone else is not counted, but a cross-chain recipient is
   assert.equal(s2.proofsToOthers, 0);
   assert.equal(assess(s2).verdict, "VERIFIED");
 });
+
+const val = (validator: string, response: number | null) => ({
+  id: `v-${validator}-${response}`, validatorAddress: validator, response,
+  status: response === null ? "PENDING" : "RESPONDED", tag: null, createdAt: String(T0),
+});
+const paidTrio = () => [0, 1, 2, 0, 1, 2].map((p, i) => review(9000 + i, { clientAddress: addr(0xa0 + p), paidTx: `0xv${i}`, payer: addr(0xa0 + p) }));
+
+test("an attestation from the agent's own wallet is reported and not counted", () => {
+  const s = computeSignals(agent([], { validations: [val(OWNER, 100)] }));
+  assert.equal(s.selfValidated, 1);
+  assert.equal(s.independentValidations, 0);
+  const a = assess(s);
+  assert.ok(a.findings.some((f) => f.code === "SELF_VALIDATED"));
+  assert.ok(a.findings.some((f) => f.code === "NO_VALIDATION" && /all from the agent itself/.test(f.measured)));
+});
+
+test("an independent attestation is evidence and never moves confidence", () => {
+  const without = assess(computeSignals(agent(paidTrio())));
+  const withIt = assess(computeSignals(agent(paidTrio(), { validations: [val(addr(0x7777), 95)] })));
+  assert.equal(withIt.verdict, "VERIFIED");
+  assert.equal(withIt.confidence, without.confidence);
+  assert.ok(withIt.findings.some((f) => f.code === "INDEPENDENTLY_VALIDATED"));
+  assert.ok(!withIt.findings.some((f) => f.code === "NO_VALIDATION"));
+});
+
+test("an independent validator's failing score is flagged", () => {
+  const a = assess(computeSignals(agent(paidTrio(), { validations: [val(addr(0x7777), 20), val(addr(0x8888), null)] })));
+  assert.ok(a.findings.some((f) => f.code === "VALIDATION_FAILED"));
+  assert.ok(a.findings.some((f) => f.code === "INDEPENDENTLY_VALIDATED" && /1 pending/.test(f.measured)));
+});

@@ -36,6 +36,12 @@ export interface Signals {
   namedTool: number;
   validations: number;
   validationsPassed: number;
+  /** Attestations from the agent's own owner or wallet — not independent, never counted. */
+  selfValidated: number;
+  /** Attestations from validators the agent does not control. */
+  independentValidations: number;
+  /** Their 0–100 responses where one was given. Whether a score passes is a threshold, and thresholds live in verdict.ts. */
+  independentResponses: number[];
   /** 0..1 over declared registration fields. */
   registrationCompleteness: number;
   declared: string[];
@@ -131,6 +137,10 @@ export function computeSignals(agent: RawAgent): Signals {
     : null;
 
   const vs = agent.validations ?? [];
+  // A validator the agent controls is the agent vouching for itself — the same
+  // self-dealing the reviews are checked for, so it is split out before counting.
+  const selfV = vs.filter((v) => owned.has(v.validatorAddress.toLowerCase()));
+  const indepV = vs.filter((v) => !owned.has(v.validatorAddress.toLowerCase()));
 
   return {
     sample: n,
@@ -155,6 +165,9 @@ export function computeSignals(agent: RawAgent): Signals {
     namedTool: live.filter((f) => Boolean(f.feedbackFile?.mcpTool)).length,
     validations: vs.length,
     validationsPassed: vs.filter((v) => (v.status ?? "").toUpperCase().includes("PASS")).length,
+    selfValidated: selfV.length,
+    independentValidations: indepV.length,
+    independentResponses: indepV.map((v) => v.response).filter((r): r is number => typeof r === "number"),
     registrationCompleteness: declared.length / fields.length,
     declared,
     missing,
