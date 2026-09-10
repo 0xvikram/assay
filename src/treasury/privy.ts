@@ -112,3 +112,34 @@ export async function treasuryTransfer(to: `0x${string}`, valueWei: bigint) {
   });
   return res;
 }
+
+export interface SettlementOutcome {
+  to: string;
+  valueWei: string;
+  allowed: boolean;
+  hash?: string;
+  refusedBecause?: string;
+}
+
+/**
+ * The counterparty leg, and the reason Privy is in this project at all.
+ *
+ * The mandate decides *whether* to pay — it is application logic, running in
+ * the agent's own process, and an agent that enforces its own spending limit is
+ * exactly the thing this project argues you should not trust. The policy
+ * decides whether we *may*: it lives outside that process, is owned by a key
+ * quorum the agent cannot change alone, and refuses before anything is signed.
+ *
+ * Both have to agree. A VERIFIED counterparty the treasury has never been told
+ * about is still refused, and that refusal is the point — so it is returned as
+ * an outcome to be reported, not thrown as an error.
+ */
+export async function settleWithCounterparty(to: `0x${string}`, valueWei: bigint): Promise<SettlementOutcome> {
+  const base = { to, valueWei: valueWei.toString() };
+  try {
+    const res = await treasuryTransfer(to, valueWei);
+    return { ...base, allowed: true, hash: res.hash };
+  } catch (err) {
+    return { ...base, allowed: false, refusedBecause: (err as Error).message.slice(0, 240) };
+  }
+}

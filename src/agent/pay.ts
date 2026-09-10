@@ -4,6 +4,7 @@ import { createClientHederaSigner, PrivateKey } from "@x402/hedera";
 import { ExactHederaScheme } from "@x402/hedera/exact/client";
 import { decide, enforce, loadMandate, type Ledger } from "./mandate";
 import { writeReceipt } from "./receipt";
+import { settleWithCounterparty } from "../treasury/privy";
 
 /**
  * The reference paying agent. It does exactly one thing an agent about to pay
@@ -17,6 +18,8 @@ const wantReceipt = args.includes("--receipt");
 const waitForHuman = args.includes("--wait");
 /** What the agent intends to spend with this counterparty if the verdict allows it, in tinybar. */
 const intendedSpend = process.env.INTENDED_SPEND ?? "10000000";
+/** The counterparty leg settles on Base Sepolia through the Privy treasury, so it is priced in wei. */
+const settleWei = BigInt(process.env.COUNTERPARTY_SPEND_WEI ?? "1000000000000");
 const [chain, agentId] = ref.split(":");
 const url = `${BASE}/api/v1/agents/${chain}/${agentId}`;
 
@@ -75,7 +78,7 @@ if (res.status !== 200) {
   process.exit(1);
 }
 
-const report = await res.json() as { assessment: { verdict: string; confidence: number; headline: string }; provenance: { deployment: string; block: number } };
+const report = await res.json() as { agent: { wallet: string | null; owner: string }; assessment: { verdict: string; confidence: number; headline: string }; provenance: { deployment: string; block: number } };
 console.log(`\n  ${b("3. the verdict we paid for")}`);
 console.log(`     ${report.assessment.verdict}  ${dim(`confidence ${report.assessment.confidence}/100`)}`);
 console.log(`     ${report.assessment.headline}`);
@@ -104,6 +107,7 @@ console.log(`\n  ${b("5. decision under the mandate")}`);
 console.log(`     intent      pay ${ref} up to ${intendedSpend} tinybar`);
 console.log(`     evidence    ${report.assessment.verdict} (${paid?.amount ?? "?"} ${paid?.asset ?? ""} · ${settlement?.transaction ?? "settling"})`);
 console.log(`     decision    ${b(decision.action.toUpperCase())} — ${decision.why}`);
+let proceed = decision.action === "proceed";
 
 // ---- step-up: the one thing the agent must not do for itself ---------------
 if (decision.action === "step-up") {
@@ -124,11 +128,37 @@ if (decision.action === "step-up") {
         approved = true;
         console.log(`     ${b("approved")} on HCS seq ${hit.seq} — cap ${hit.newCap}, nullifier ${hit.nullifier.slice(0, 10)}…`);
         console.log(`     decision    ${b("PROCEED")} — a live human raised the envelope`);
+        proceed = true;
       } else {
         process.stdout.write(dim("."));
       }
     }
     if (!approved) console.log(`\n     ${dim("no approval within 10 minutes — staying refused")}`);
+  }
+}
+
+// ---- settle with the counterparty, through a wallet that can refuse us -----
+// The mandate said proceed. That is our own code agreeing with itself, so it
+// is not yet a control: the Privy policy, owned by a key quorum and enforced
+// outside this process, is what decides whether the money may actually move.
+if (proceed) {
+  const recipient = (report.agent.wallet ?? report.agent.owner) as `0x${string}`;
+  console.log(`\n  ${b("6. settle with the counterparty")}`);
+  if (!process.env.PRIVY_WALLET_ID) {
+    console.log(`     ${dim("PRIVY_WALLET_ID not set — run npm run treasury:setup to enable the policy-bound treasury")}`);
+  } else if (!/^0x[0-9a-fA-F]{40}$/.test(recipient)) {
+    console.log(`     ${dim(`counterparty has no EVM wallet on its registration (${recipient}) — nothing to pay`)}`);
+  } else {
+    console.log(`     recipient   ${recipient}  ${dim("(the counterparty's registered wallet)")}`);
+    console.log(`     amount      ${settleWei} wei on Base Sepolia`);
+    const out = await settleWithCounterparty(recipient, settleWei);
+    if (out.allowed) {
+      console.log(`     ${b("policy ALLOWED")} — https://sepolia.basescan.org/tx/${out.hash}`);
+    } else {
+      console.log(`     ${b("policy REFUSED")} — the mandate said proceed and the wallet still said no`);
+      console.log(`     ${dim(out.refusedBecause ?? "")}`);
+      console.log(`     ${dim("this is the control working: the allowlist and cap are owned by a key quorum, not by this process")}`);
+    }
   }
 }
 
