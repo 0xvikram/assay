@@ -10,5 +10,5 @@ import { registerTools, type Wrap } from "../src/mcp/tools";
  */
 const free: Wrap = (h) => h;
 const server = new McpServer({ name: "assay", version: "0.1.0" });
-registerTools(server, { agent: free, resolve: free, corroborate: free }, "(free on this local transport; paid over x402 on the hosted endpoint)");
+registerTools(server, { agent: free, resolve: free, corroborate: free, lending: free }, "(free on this local transport; paid over x402 on the hosted endpoint)");
 await server.connect(new StdioServerTransport());

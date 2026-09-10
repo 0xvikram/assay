@@ -5,6 +5,7 @@ import { resolveEndpoint } from "../engine/resolve";
 import { corroborate } from "../engine/corroborate";
 import { CHAINS, healthyChains } from "../engine/graph/registry";
 import { THRESHOLDS } from "../engine/score/verdict";
+import { compareMarket, SOURCES } from "../lending";
 
 type ToolResult = { content: { type: "text"; text: string }[]; structuredContent?: Record<string, unknown>; isError?: boolean };
 type Handler<A> = (args: A) => Promise<ToolResult>;
@@ -39,7 +40,7 @@ const ref = { chain: z.string().describe("Registry key (base, ethereum, bsc, pol
  * discovery stays free so an agent can find out what a verdict would cost
  * before deciding to buy one.
  */
-export function registerTools(server: McpServer, paid: { agent: Wrap; resolve: Wrap; corroborate: Wrap }, note: string) {
+export function registerTools(server: McpServer, paid: { agent: Wrap; resolve: Wrap; corroborate: Wrap; lending: Wrap }, note: string) {
   server.tool(
     "assay_agent",
     `Is this ERC-8004 agent's reputation real? Full verdict (VERIFIED / UNPROVEN / WASH_REPUTATION_DETECTED) with the evidence, what would change it, and the exact subgraph deployment and block it was read at. ${note}`,
@@ -91,6 +92,29 @@ export function registerTools(server: McpServer, paid: { agent: Wrap; resolve: W
       } catch (err) { return fail(err); }
     }),
   );
+
+  server.tool(
+    "lending_compare",
+    `Reconcile one lending market across two Messari standardized subgraphs. Returns AGREE, DISAGREE, or a refusal (METHODOLOGY_MISMATCH / SCHEMA_MISMATCH) when the two sources did not derive their figures the same way — comparing across a version difference would invent agreement. ${note}`,
+    {
+      asset: z.string().describe("Token symbol, e.g. USDC or WETH"),
+      sourceA: z.string().describe("Registry key, e.g. compound-v3-ethereum"),
+      sourceB: z.string().describe("A different registry key, e.g. spark-lend-ethereum"),
+    },
+    paid.lending(async ({ asset, sourceA, sourceB }: { asset: string; sourceA: string; sourceB: string }) => {
+      try {
+        const r = await compareMarket(sourceA, sourceB, asset);
+        const c = r.comparison;
+        const lines = [`${c.comparability} / ${c.reconciliation}`, c.statement];
+        for (const d of c.deltas) lines.push(`- ${d.field}: ${d.a} vs ${d.b} (${(d.relDiff * 100).toFixed(1)}%${d.withinTolerance ? ", within tolerance" : ", outside tolerance"})`);
+        lines.push(`Read from ${r.provenance.map((p) => `${p.source} deployment ${p.deployment} at block ${p.block}`).join("; ")}.`);
+        return ok(lines.join("\n"), r as unknown as Record<string, unknown>);
+      } catch (err) { return fail(err); }
+    }),
+  );
+
+  server.tool("lending_sources", "Free: the lending registry — protocol, network, schema and methodology versions, and why any source is not servable.", {}, async () =>
+    ok(SOURCES.map((s) => `${s.key}: ${s.protocol} on ${s.network}, schema ${s.schemaVersion}, methodology ${s.methodologyVersion}${s.healthy ? "" : ` — NOT SERVABLE: ${s.unhealthyReason ?? "unhealthy"}`}`).join("\n"), { sources: SOURCES }));
 
   server.tool("assay_chains", "Free: the chain registry with health flags.", {}, async () =>
     ok(`${healthyChains().length} healthy of ${CHAINS.length} registered: ${CHAINS.map((c) => `${c.key}${c.healthy ? "" : " (unhealthy, refused)"}`).join(", ")}.`, { chains: CHAINS }));

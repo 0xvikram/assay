@@ -1,0 +1,11 @@
+{
+  "$comment": "Messari standardized Lending/CDP deployments. Adding a source is a row here, never a code path. Comparison is only ever attempted between sources whose schemaVersion AND methodologyVersion match — the versions below are what we expect, and the loader verifies them against the subgraph on every read.",
+  "sources": [
+    { "key": "aave-v3-ethereum",     "protocol": "Aave v3",     "network": "MAINNET", "subgraphId": "JCNWRypm7FYwV8fx5HhzZPSFaMxgkPuw4TnR3Gpi81zk", "healthy": true,  "schemaVersion": "3.1.0", "methodologyVersion": "1.1.0" },
+    { "key": "compound-v3-ethereum", "protocol": "Compound v3", "network": "MAINNET", "subgraphId": "AwoxEZbiWLvv6e3QdvdMZw4WDURdGbvPfHmZRc8Dpfz9", "healthy": true,  "schemaVersion": "3.1.0", "methodologyVersion": "1.0.0" },
+    { "key": "spark-lend-ethereum",  "protocol": "Spark",       "network": "MAINNET", "subgraphId": "GbKdmBe4ycCYCQLQSjqGg6UHYoYfbyJyq5WrG35pv1si", "healthy": true,  "schemaVersion": "3.1.0", "methodologyVersion": "1.0.0" },
+    { "key": "moonwell-base",        "protocol": "Moonwell",    "network": "BASE",    "subgraphId": "33ex1ExmYQtwGVwri1AP3oMFPGSce6YbocBP7fWbsBrg", "healthy": true,  "schemaVersion": "2.0.1", "methodologyVersion": "1.0.0" },
+    { "key": "aave-v3-base",         "protocol": "Aave v3",     "network": "BASE",    "subgraphId": "D7mapexM5ZsQckLJai2FawTKXJ7CqYGKM8PErnS3cJi9", "healthy": false, "schemaVersion": "3.1.0", "methodologyVersion": "1.1.0", "unhealthyReason": "gateway: subgraph not found — no allocations (checked 2026-09-10)" },
+    { "key": "compound-v3-base",     "protocol": "Compound v3", "network": "BASE",    "subgraphId": "AwoxEZbiWLvv6e3QdvdMZw4WDURdGbvPfHmZRc8Dpfz9", "healthy": false, "schemaVersion": "3.1.0", "methodologyVersion": "1.0.0", "unhealthyReason": "Messari's deployment.json lists the Ethereum query id for this slug; the deployment reports network MAINNET, so it is not Base" }
+  ]
+}

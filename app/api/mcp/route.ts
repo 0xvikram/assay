@@ -20,14 +20,14 @@ function priceFor(tier: Tier) {
   return process.env.X402_ASSET === "usdc" ? TIERS[tier].usd : { asset: "0.0.0", amount: TIERS[tier].tinybar };
 }
 
-let wrappers: Promise<{ agent: Wrap; resolve: Wrap; corroborate: Wrap; note: string }> | null = null;
+let wrappers: Promise<{ agent: Wrap; resolve: Wrap; corroborate: Wrap; lending: Wrap; note: string }> | null = null;
 
 function paidWrappers() {
   wrappers ??= (async () => {
     const payTo = process.env.HEDERA_SERVICE_ACCOUNT_ID;
     if (!payTo) {
       const off: Wrap = () => async () => ({ content: [{ type: "text", text: "Refused: payments are not configured on this deployment (HEDERA_SERVICE_ACCOUNT_ID unset). assay_preview is free." }], isError: true });
-      return { agent: off, resolve: off, corroborate: off, note: "(unavailable: payments not configured)" };
+      return { agent: off, resolve: off, corroborate: off, lending: off, note: "(unavailable: payments not configured)" };
     }
     const rs = resourceServer();
     await rs.initialize();
@@ -62,6 +62,7 @@ function paidWrappers() {
       agent: await wrap("agents"),
       resolve: await wrap("resolve"),
       corroborate: await wrap("corroborate"),
+      lending: await wrap("lending"),
       note: `Costs ${TIERS.agents.tinybar} tinybar on ${NETWORK} via x402; discovery tools are free.`,
     };
   })();
@@ -71,7 +72,7 @@ function paidWrappers() {
 async function handle(req: NextRequest) {
   const w = await paidWrappers();
   const server = new McpServer({ name: "assay", version: "0.1.0" });
-  registerTools(server, { agent: w.agent, resolve: w.resolve, corroborate: w.corroborate }, w.note);
+  registerTools(server, { agent: w.agent, resolve: w.resolve, corroborate: w.corroborate, lending: w.lending }, w.note);
   const transport = new WebStandardStreamableHTTPServerTransport({ sessionIdGenerator: undefined, enableJsonResponse: true });
   await server.connect(transport);
   try {

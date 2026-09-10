@@ -393,7 +393,7 @@ Paste each *Opus brief* into Claude Code from the repo root. Each brief assumes 
 - `npx @modelcontextprotocol/inspector` against `https://<vercel-url>/api/mcp` lists the tools, and calling `assay_agent` **without payment returns a 402-shaped error**; the reference agent from Phase D calls it and pays. Record this — it is the strongest single shot in the Hedera video.
 - The README has a "Use from Claude / Cursor" section. This is the Graph AI (From Scratch) submission surface.
 
-### Phase F — DEFERRED (Idea B: lending evidence). Do not start until A–E, G–J are done.
+### Phase F — Idea B: lending evidence ✅ Sep 10 — registry, methodology-aware reconcile, paid route, MCP tools, 7 tests
 
 **Opus brief**
 > Add `registry/lending.json` with the six Messari deployments from `docs/PLAN.md` §1 (id, network, protocol, schema/subgraph/methodology versions). On load, verify each entry by querying `protocols { id name network schemaVersion subgraphVersion methodologyVersion }` and `_meta`; if the on-chain versions disagree with the registry, log a warning and trust the subgraph. Detect the compound-v3-base duplicate-ID problem by checking `protocols[0].network` and mark the entry `unusable` with a reason if it isn't Base.
@@ -456,7 +456,7 @@ README must have: one-paragraph pitch, setup from clean clone, architecture (lin
 |---|---|---|
 | Hedera — AI & Agentic Payments | Live Blocky402-settled endpoint; one real paid request; HashScan; ≤5 min video | Phase C, J |
 | The Graph — AI (From Scratch) | MCP server, live Graph data, 2–4 min video | Phase E, J |
-| The Graph — Composable/Standardized | Six Agent0 deployments, one schema, cross-chain `corroborate()` + `CROSS_CHAIN_INCONSISTENT`; a chain is a registry row. Weaker than Messari; Phase F upgrades it if time allows | Phase A, E |
+| The Graph — Composable/Standardized | **Two schema families**: six Agent0 deployments with cross-chain `corroborate()`, plus four Messari Lending deployments reconciled with `METHODOLOGY_MISMATCH` / `SCHEMA_MISMATCH` refusals. A source is a registry row. | Phase A, E, F |
 | Arc — Launch Testnet→Mainnet | Nanopayments route live; frontend+backend; diagram; mainnet-ready note by Sept 30 | Phase G |
 | Arc — Agentic Economy | Agent with decision logic that pays over Arc | Phase G |
 | Privy — B2B | Wallet + policy + quorum + approval workflow; source | Phase G |

@@ -78,6 +78,7 @@ npm run agent:pay-arc -- --deposit 1.00           # same purchase on Arc
 npm run register:self                             # Assay as an ERC-8004 agent
 npm run treasury:setup && npm run treasury:demo   # Privy policy: allowlist passes, stranger refused
 npm run agent:quote -- --chain 8453 --in USDC --out WETH --amount 1000000
+npm run lending:demo                              # all three reconciliation outcomes, live
 npm run mcp                                       # stdio MCP server
 ```
 
@@ -89,15 +90,30 @@ npm run mcp                                       # stdio MCP server
 | `GET /api/v1/preview/{chain}/{agentId}` | free | verdict + confidence + block |
 | `GET /api/v1/resolve?url=` | paid | which registered agents claim this endpoint |
 | `GET /api/v1/corroborate/{owner or chain:id}` | paid ×4 | the owner across every healthy chain |
+| `GET /api/v1/lending/market?asset=&sources=a,b` | paid | reconcile one market across two Messari subgraphs, or refuse |
+| `GET /api/v1/lending/sources` | free | the lending registry with schema and methodology versions |
 | `GET /api/v1/trail` · `GET /api/v1/mandate/{id}/approvals` | free | the ledger, from the mirror node |
 | `POST /api/mcp` | mixed | Streamable HTTP MCP; `assay_agent` paid, `assay_preview` free |
 | `GET /api/openapi` · `/api/v1/chains` · `/api/healthz` | free | |
 
 Every paid route's 402 offers **three rails**: `hedera:testnet` (Blocky402), `eip155:5042002` Arc (Circle Gateway), `eip155:84532` Base Sepolia (x402.org). Free routes allow 10 requests/min per IP.
 
-## Adding a chain
+## Adding a source
 
-One row in `registry/chains.json` — key, chain id, Agent0 subgraph id, `healthy`. The engine refuses to answer from unhealthy chains rather than guess.
+One row in `registry/chains.json` (a chain) or `registry/lending.json` (a lending protocol) — never a code path. The engine refuses to answer from a source marked unhealthy rather than guess.
+
+## Composition, and when it refuses
+
+Two subgraphs agreeing on a number means nothing unless they computed it the same way. Messari versions that intent: `schemaVersion` says what the fields mean, `methodologyVersion` says how they were derived. Assay re-reads both from every subgraph on every request and compares only when both match:
+
+| Live pair | Result |
+|---|---|
+| `compound-v3-ethereum` ↔ `spark-lend-ethereum` | **COMPARABLE / DISAGREE** — same schema *and* methodology, but the USDC lender rate differs 28.6%. Reported as `EVIDENCE_INCONSISTENT`, never averaged. |
+| `aave-v3-ethereum` ↔ `spark-lend-ethereum` | **METHODOLOGY_MISMATCH** — both schema 3.1.0, methodology 1.1.0 vs 1.0.0. Comparing would invent agreement. |
+| `aave-v3-ethereum` ↔ `moonwell-base` | **SCHEMA_MISMATCH** — 3.1.0 vs 2.0.1. The fields do not mean the same thing. |
+| `aave-v3-base`, `compound-v3-base` | **not servable** — no allocations, and a query id that resolves to Ethereum. Refused, with the reason stated. |
+
+`npm run lending:demo` prints all of it live.
 
 ## Repository
 

@@ -1,6 +1,7 @@
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
-import type { ChainEntry } from "./registry";
+/** All the client needs of a source: a name for errors, and what to query. */
+export interface GraphSource { name: string; subgraphId: string }
 
 function loadKey(): string {
   if (process.env.GRAPH_API_KEY) return process.env.GRAPH_API_KEY;
@@ -41,7 +42,7 @@ const META_FRAGMENT = `_meta { deployment hasIndexingErrors block { number times
  * variable that goes unused, so callers state exactly what their body consumes.
  */
 export async function query<T>(
-  chain: ChainEntry,
+  chain: GraphSource,
   body: string,
   variables: Record<string, unknown> = {},
   declarations = "$id: ID!, $first: Int",
@@ -49,7 +50,7 @@ export async function query<T>(
 ): Promise<GraphResult<T>> {
   KEY ??= loadKey();
   const url = `https://gateway.thegraph.com/api/${KEY}/subgraphs/id/${chain.subgraphId}`;
-  const gql = `query Assay(${declarations}) { ${META_FRAGMENT} ${body} }`;
+  const gql = `query Assay${declarations ? `(${declarations})` : ""} { ${META_FRAGMENT} ${body} }`;
   const started = Date.now();
 
   const res = await fetch(url, {
