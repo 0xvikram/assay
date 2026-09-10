@@ -18,6 +18,7 @@ export default function Nav() {
         <Link href="/#rails">Rails</Link>
         <Link href="/#receipt">Receipt</Link>
         <Link href="/trail">Ledger</Link>
+        <Link href="/escalate">Step-up</Link>
         <Link href="/architecture">Architecture</Link>
         <a href="/api/openapi">API</a>
       </div>

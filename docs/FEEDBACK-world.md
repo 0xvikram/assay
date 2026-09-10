@@ -70,4 +70,16 @@ Written while integrating, not after. Dated entries; the ask is stated where we 
 | Sandbox Android tester | 2026-09-08 | 2026-09-09 — app installed |
 | World ID RP registration | — | 2026-09-09, self-served via MCP |
 | RP signing key | — | 2026-09-09, minted locally, never transmitted |
-| Selfie Check (Beta) flag | 2026-09-08 | outstanding |
+| Selfie Check (Beta) flag | 2026-09-08 | 2026-09-10 — first live approval recorded with credential `selfie` (HCS topic 0.0.10419050, seq 10) |
+
+## 2026-09-10 — first live Selfie Check
+
+The step-up ran end to end on the Android sandbox build: IDKit request from `/escalate`, Selfie
+Check in the sandbox World ID app, backend verification against `/api/v4/verify/{rp_id}`, and
+the approval written to HCS as seq 10 with credential `selfie`, escalation `esc-1`, new cap
+`$5.00`. It appears on the public ledger next to the payments the agent made.
+
+- **Observation:** because the proof is bound to the escalation id as its signal, an id can be
+  approved exactly once. That is the right property, but it means every demo run needs a freshly
+  minted link. We added a generator with a QR code to `/escalate` so a tester scans rather than
+  copies a URL from a terminal onto a phone.
