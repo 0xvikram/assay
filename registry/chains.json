@@ -1,13 +1,78 @@
 {
   "$comment": "Deployments of the Agent0 ERC-8004 subgraph. Adding a chain is a registry entry, not a code change.",
   "chains": [
-    { "key": "ethereum",     "chainId": 1,        "name": "Ethereum",      "subgraphId": "FV6RR6y13rsnCxBAicKuQEwDp8ioEGiNaWaZUmvr1F8k", "healthy": true,  "explorer": "https://etherscan.io" },
-    { "key": "base",         "chainId": 8453,     "name": "Base",          "subgraphId": "43s9hQRurMGjuYnC1r2ZwS6xSQktbFyXMPMqGKUFJojb", "healthy": true,  "explorer": "https://basescan.org" },
-    { "key": "bsc",          "chainId": 56,       "name": "BNB Chain",     "subgraphId": "D6aWqowLkWqBgcqmpNKXuNikPkob24ADXCciiP8Hvn1K", "healthy": true,  "explorer": "https://bscscan.com" },
-    { "key": "polygon",      "chainId": 137,      "name": "Polygon",       "subgraphId": "9q16PZv1JudvtnCAf44cBoxg82yK9SSsFvrjCY9xnneF", "healthy": true,  "explorer": "https://polygonscan.com" },
-    { "key": "base-sepolia", "chainId": 84532,    "name": "Base Sepolia",  "subgraphId": "4yYAvQLFjBhBtdRCY7eUWo181VNoTSLLFd5M7FXQAi6u", "healthy": true,  "explorer": "https://sepolia.basescan.org" },
-    { "key": "bsc-chapel",   "chainId": 97,       "name": "BSC Chapel",    "subgraphId": "BTjind17gmRZ6YhT9peaCM13SvWuqztsmqyfjpntbg3Z", "healthy": true,  "explorer": "https://testnet.bscscan.com" },
-    { "key": "eth-sepolia",  "chainId": 11155111, "name": "Sepolia",       "subgraphId": "6wQRC7geo9XYAhckfmfo8kbMRLeWU8KQd3XsJqFKmZLT", "healthy": false, "explorer": "https://sepolia.etherscan.io" },
-    { "key": "monad-testnet","chainId": 10143,    "name": "Monad Testnet", "subgraphId": "8iiMH9sj471jbp7AwUuuyBXvPJqCEsobuHBeUEKQSxhU", "healthy": false, "explorer": "https://testnet.monadexplorer.com" }
+    {
+      "key": "ethereum",
+      "chainId": 1,
+      "name": "Ethereum",
+      "subgraphId": "FV6RR6y13rsnCxBAicKuQEwDp8ioEGiNaWaZUmvr1F8k",
+      "healthy": true,
+      "explorer": "https://etherscan.io"
+    },
+    {
+      "key": "base",
+      "chainId": 8453,
+      "name": "Base",
+      "subgraphId": "43s9hQRurMGjuYnC1r2ZwS6xSQktbFyXMPMqGKUFJojb",
+      "healthy": true,
+      "explorer": "https://basescan.org"
+    },
+    {
+      "key": "bsc",
+      "chainId": 56,
+      "name": "BNB Chain",
+      "subgraphId": "D6aWqowLkWqBgcqmpNKXuNikPkob24ADXCciiP8Hvn1K",
+      "healthy": true,
+      "explorer": "https://bscscan.com"
+    },
+    {
+      "key": "polygon",
+      "chainId": 137,
+      "name": "Polygon",
+      "subgraphId": "9q16PZv1JudvtnCAf44cBoxg82yK9SSsFvrjCY9xnneF",
+      "healthy": true,
+      "explorer": "https://polygonscan.com"
+    },
+    {
+      "key": "base-sepolia",
+      "chainId": 84532,
+      "name": "Base Sepolia",
+      "subgraphId": "4yYAvQLFjBhBtdRCY7eUWo181VNoTSLLFd5M7FXQAi6u",
+      "healthy": true,
+      "explorer": "https://sepolia.basescan.org"
+    },
+    {
+      "key": "bsc-chapel",
+      "chainId": 97,
+      "name": "BSC Chapel",
+      "subgraphId": "BTjind17gmRZ6YhT9peaCM13SvWuqztsmqyfjpntbg3Z",
+      "healthy": true,
+      "explorer": "https://testnet.bscscan.com"
+    },
+    {
+      "key": "eth-sepolia",
+      "chainId": 11155111,
+      "name": "Sepolia",
+      "subgraphId": "6wQRC7geo9XYAhckfmfo8kbMRLeWU8KQd3XsJqFKmZLT",
+      "healthy": false,
+      "explorer": "https://sepolia.etherscan.io"
+    },
+    {
+      "key": "monad-testnet",
+      "chainId": 10143,
+      "name": "Monad Testnet",
+      "subgraphId": "8iiMH9sj471jbp7AwUuuyBXvPJqCEsobuHBeUEKQSxhU",
+      "healthy": false,
+      "explorer": "https://testnet.monadexplorer.com"
+    },
+    {
+      "key": "monad",
+      "chainId": 143,
+      "name": "Monad",
+      "subgraphId": "4tvLxkczjhSaMiqRrCV1EyheYHyJ7Ad8jub1UUyukBjg",
+      "healthy": false,
+      "explorer": "https://monadscan.com",
+      "unhealthyReason": "gateway: bad indexers — no indexer reports indexing progress (checked 2026-09-11)"
+    }
   ]
 }

@@ -146,7 +146,12 @@ Two subgraphs agreeing on a number means nothing unless they computed it the sam
 | `compound-v3-ethereum` ↔ `spark-lend-ethereum` | **COMPARABLE / DISAGREE** — same schema *and* methodology, but the USDC lender rate differs 28.6%. Reported as `EVIDENCE_INCONSISTENT`, never averaged. |
 | `aave-v3-ethereum` ↔ `spark-lend-ethereum` | **METHODOLOGY_MISMATCH** — both schema 3.1.0, methodology 1.1.0 vs 1.0.0. Comparing would invent agreement. |
 | `aave-v3-ethereum` ↔ `moonwell-base` | **SCHEMA_MISMATCH** — 3.1.0 vs 2.0.1. The fields do not mean the same thing. |
-| `aave-v3-base`, `compound-v3-base` | **not servable** — no allocations, and a query id that resolves to Ethereum. Refused, with the reason stated. |
+| `aave-v3-ethereum` ↔ `morpho-aave-v3-ethereum` | **SCHEMA_MISMATCH** on one chain — 3.1.0 vs 3.0.1. Same network and asset; still not the same fields. |
+| `aave-v3-gnosis` ↔ `spark-lend-gnosis` | **COMPARABLE / DISAGREE** — both 3.1.0 / 1.0.0 on Gnosis. USDC is collateral on Aave (liquidation threshold 78) and not on Spark (0): the disagreement is real, and it is exactly what a caller needs to see. |
+| `aave-v3-arbitrum` ↔ `compound-v3-arbitrum` | **METHODOLOGY_MISMATCH** — the Ethereum split holds on Arbitrum and Polygon too: Aave is on methodology 1.1.0, Compound on 1.0.0. |
+| `aave-v3-base`, `compound-v3-base`, `aave-v3-optimism` | **not servable** — no allocations, a query id that resolves to Ethereum, and a deployment with no protocol entity. Refused, with the reason stated. |
+
+18 registered sources across 8 networks (Ethereum, Base, Arbitrum, Polygon, Gnosis, Avalanche, BNB Chain, Optimism), 15 servable. Every one of the new rows was probed for health, network and a USDC market before it was added.
 
 `npm run lending:demo` prints all of it live.
 

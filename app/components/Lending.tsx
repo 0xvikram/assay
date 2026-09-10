@@ -7,11 +7,12 @@ type Preview = {
   versions: { key: string; schemaVersion: string; methodologyVersion: string; network: string }[];
 };
 
-/** The three pairs that make the argument, in the order they make it. */
+/** The pairs that make the argument, in the order they make it: comparable, then each way it is not. */
 const PAIRS: { a: string; b: string; label: string }[] = [
   { a: "compound-v3-ethereum", b: "spark-lend-ethereum", label: "Compound ↔ Spark" },
+  { a: "aave-v3-gnosis", b: "spark-lend-gnosis", label: "Aave ↔ Spark · Gnosis" },
   { a: "aave-v3-ethereum", b: "spark-lend-ethereum", label: "Aave ↔ Spark" },
-  { a: "aave-v3-ethereum", b: "moonwell-base", label: "Aave ↔ Moonwell" },
+  { a: "aave-v3-ethereum", b: "morpho-aave-v3-ethereum", label: "Aave ↔ Morpho" },
 ];
 
 const TONE: Record<string, string> = {
