@@ -3,6 +3,7 @@ import Console from "./components/Console";
 import Trail from "./components/Trail";
 import Lending from "./components/Lending";
 import { Mark } from "./components/Nav";
+import RunExample from "./components/RunExample";
 
 export default function Home() {
   return (
@@ -33,8 +34,8 @@ export default function Home() {
           <div style={{ display: "flex", flexDirection: "column", gap: 22 }}>
             <div className="eyebrow">01 · The problem</div>
             <h2 className="h-display t-h2">The most-reviewed agent on Base is <span className="serif">a farm.</span></h2>
-            <p className="t-lead" style={{ maxWidth: 520 }}>309,734 reviews. Ninety-five percent from one wallet, every score identical, all inside one day, none backed by a payment. Any agent ranking by reputation would pick it first.</p>
-            <div className="stats"><Stat n="95.5%" k="one wallet" /><Stat n="100%" k="one day" /><Stat n="0" k="payment-backed" /></div>
+            <p className="t-lead" style={{ maxWidth: 520 }}>309,734 reviews. Ninety-nine percent of the latest thousand from one wallet, every score identical, all inside one day, none backed by a payment. Any agent ranking by reputation would pick it first.</p>
+            <div className="stats"><Stat n="99%" k="one wallet" /><Stat n="100%" k="one day" /><Stat n="0" k="payment-backed" /></div>
           </div>
           <Console />
         </div>
@@ -47,9 +48,9 @@ export default function Home() {
             <h2 className="h-display t-h2">Confidence is earned only from <span className="serif">payment-backed, independent</span> reviews.</h2>
           </div>
           <div className="grid-rails">
-            <Verdict color="var(--mint)" name="VERIFIED" body="At least five reviews backed by verifiable on-chain payments, from at least three independent payers, none of them dominant. Confidence grows with depth and spread." />
-            <Verdict color="var(--gold)" name="UNPROVEN" body="Reputation exists but nothing about it can be independently verified — or there is too little of it to judge. Not a punishment: every report ends with the priced path to VERIFIED." />
-            <Verdict color="var(--coral)" name="WASH_REPUTATION_DETECTED" body="The signal was manufactured: one address wrote most of it, every score is identical and unpaid, it all landed in one day, or the agent reviewed itself. Payment-backed evidence can still outrank it." />
+            <Verdict color="var(--mint)" name="VERIFIED" body="At least five reviews backed by verifiable on-chain payments, from at least three independent payers, none of them dominant. No agent we have checked has earned it yet — the closest is Assay itself, with one." example={{ target: "base-sepolia:9200", label: "read Assay itself" }} />
+            <Verdict color="var(--gold)" name="UNPROVEN" body="Reputation exists but nothing about it can be independently verified — or there is too little of it to judge. Not a punishment: every report ends with the priced path to VERIFIED." example={{ target: "ethereum:6888", label: "read ethereum:6888" }} />
+            <Verdict color="var(--coral)" name="WASH_REPUTATION_DETECTED" body="The signal was manufactured: one address wrote most of it, every score is identical and unpaid, it all landed in one day, or the agent reviewed itself. Payment-backed evidence can still outrank it." example={{ target: "ethereum:14645", label: "read ethereum:14645" }} />
           </div>
         </div>
       </section>
@@ -76,7 +77,7 @@ export default function Home() {
             <div className="mono" style={{ maxWidth: 360, fontSize: 12, lineHeight: 1.7, color: "var(--ink-3)" }}>same engine · same tiers · every settlement leaves a receipt on Hedera Consensus Service</div>
           </div>
           <div className="grid-rails">
-            <Rail net="hedera:testnet" name="Hedera" body="Blocky402 verifies and settles; the facilitator pays the network fee." price="1,000,000 tinybar / verdict" />
+            <Rail net="hedera:testnet" name="Hedera" body="Blocky402 verifies and settles; the facilitator pays the network fee." price="0.01 ℏ / verdict" />
             <Rail net="eip155:5042002" name="Arc" body="Signed off-chain, batched by Circle Gateway. No gas." price="$0.001 USDC / verdict" />
             <Rail net="eip155:84532" name="Base" body="Through x402.org — the rail agent marketplaces pay upstream on." price="$0.001 USDC / verdict" />
           </div>
@@ -138,7 +139,7 @@ export default function Home() {
             </div>
           </div>
           <div className="footer-mark-row" aria-hidden="true"><span>ASSAY</span></div>
-          <div className="footer-meta mono"><span>ETHOnline 2026 · built solo</span><span>Every number on this page is a live result.</span></div>
+          <div className="footer-meta mono"><span>ETHOnline 2026 · built solo</span><span>The console, composition and ledger read live on every visit.</span></div>
         </div>
       </footer>
     </main>
@@ -154,11 +155,12 @@ function Stat({ n, k }: { n: string; k: string }) {
   );
 }
 
-function Verdict({ color, name, body }: { color: string; name: string; body: string }) {
+function Verdict({ color, name, body, example }: { color: string; name: string; body: string; example: { target: string; label: string } }) {
   return (
     <div className="glass glass-lift" style={{ display: "flex", flexDirection: "column", gap: 12, padding: "clamp(20px, 2vw, 28px)" }}>
-      <div style={{ fontSize: 20, fontWeight: 500, letterSpacing: "-0.02em", color, wordBreak: "break-word" }}>{name}</div>
+      <div className="badge mono" style={{ fontSize: 16, fontWeight: 500, color, overflowWrap: "anywhere" }}>{name}</div>
       <div style={{ fontSize: 14, lineHeight: 1.55, fontWeight: 300, color: "var(--ink-2)" }}>{body}</div>
+      <RunExample target={example.target} label={example.label} />
     </div>
   );
 }

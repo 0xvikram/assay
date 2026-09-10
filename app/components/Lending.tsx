@@ -59,7 +59,7 @@ export default function Lending() {
     <div className="glass lend" style={{ padding: "clamp(18px, 2.2vw, 30px)", display: "flex", flexDirection: "column", gap: 18, minWidth: 0 }}>
       <div className="eyebrow" style={{ display: "flex", justifyContent: "space-between", gap: 12, fontSize: 11, letterSpacing: "0.12em" }}>
         <span>Composition</span>
-        <span>{sources ? `${servable.length} servable · ${refused.length} refused` : "live · Messari"}</span>
+        <span><span className="live-dot" aria-hidden="true" />{sources ? `${servable.length} servable · ${refused.length} refused` : "live · Messari"}</span>
       </div>
 
       <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
@@ -72,11 +72,18 @@ export default function Lending() {
       </div>
 
       {error && <div style={{ color: "var(--coral)", fontSize: 14 }}>refused: {error}</div>}
-      {busy && !error && <div className="mono" style={{ fontSize: 12, color: "var(--ink-4)" }}>reading both subgraphs…</div>}
+      {busy && !error && (
+        <div className="skel-stack" style={{ borderTop: 0, paddingTop: 0 }} aria-label="reading both subgraphs">
+          <div className="skel" style={{ height: 17, width: "46%" }} />
+          <div className="skel" style={{ height: 13, width: "94%" }} />
+          <div className="skel" style={{ height: 13, width: "70%" }} />
+          <div className="lend-versions"><div className="skel" style={{ height: 64 }} /><div className="skel" style={{ height: 64 }} /></div>
+        </div>
+      )}
 
       {preview && !busy && !error && (
         <div className="fade-in" style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-          <div className="mono" style={{ fontSize: 17, fontWeight: 500, letterSpacing: "-0.01em", color: tone, overflowWrap: "anywhere" }}>
+          <div className="badge mono" style={{ fontSize: 17, fontWeight: 500, color: tone, overflowWrap: "anywhere" }}>
             {preview.comparability}
           </div>
           <p style={{ margin: 0, fontSize: 14, lineHeight: 1.55, fontWeight: 300, color: "var(--ink-2)" }}>{preview.statement}</p>

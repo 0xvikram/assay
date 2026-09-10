@@ -64,7 +64,11 @@ export default function Trail({ limit = 8, compact = false }: { limit?: number; 
 
   if (waiting && !data) return note(`the free ledger read is rate limited — retrying in ${waiting}s`, "var(--gold)");
   if (error && !data) return note(`ledger unreachable: ${error}`, "var(--coral)");
-  if (!data) return note("reading the mirror node…");
+  if (!data) return (
+    <div className="trail-list" aria-label="reading the mirror node">
+      {Array.from({ length: Math.min(limit, 4) }, (_, i) => <div key={i} className="skel" style={{ height: 58, borderRadius: 16 }} />)}
+    </div>
+  );
   if (!data.topic) return note("no receipt topic configured on this deployment");
   if (!data.entries.length) return note("no receipts on this topic yet");
 

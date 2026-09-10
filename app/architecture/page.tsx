@@ -15,7 +15,7 @@ export default function Architecture() {
       <div className="eyebrow">Architecture</div>
       <h1 className="h-display t-h2" style={{ marginTop: 12 }}>One engine, two doors, <span className="serif">one ledger.</span></h1>
       <p className="t-lead" style={{ marginTop: "0.5rem", maxWidth: 620 }}>
-        One engine, two doors, one ledger. Brass is money moving; ink is data moving; dotted is verify / settle.
+        Brass is money moving; ink is data moving; dotted is verify / settle.
       </p>
       <div className="glass" style={{ overflowX: "auto", WebkitOverflowScrolling: "touch", marginTop: "1.5rem", padding: 8 }}>
         <p className="mono" style={{ margin: "4px 8px 10px", fontSize: 11, color: "var(--ink-4)" }}>scroll the diagram sideways ↔</p>
@@ -26,7 +26,7 @@ export default function Architecture() {
         <li>Agent asks; the route answers <code>402</code> with x402 requirements on <code>hedera:testnet</code>, priced by the work the route does.</li>
         <li>Agent signs, retries. Blocky402 verifies; the handler runs; settlement happens <em>only</em> on success.</li>
         <li>The engine reads the Agent0 subgraph with <code>_meta</code>. No pinned deployment and block, no answer.</li>
-        <li>Eleven detectors → verdict, evidence, and what would change it. Confidence only from payment-backed independent reviews.</li>
+        <li>Thirteen named findings → verdict, evidence, and what would change it. Confidence only from payment-backed independent reviews.</li>
         <li>A receipt lands on the HCS topic. The topic, read via the mirror node, is the whole memory. No database.</li>
       </ol>
       <h2 className="eyebrow" style={{ marginTop: "2rem" }}>Write path — the receipt</h2>

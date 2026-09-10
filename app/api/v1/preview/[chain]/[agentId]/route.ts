@@ -8,10 +8,16 @@ export const maxDuration = 60;
 
 type Params = { params: Promise<{ chain: string; agentId: string }> };
 
-/** The free tier: the verdict and how much it is worth, nothing that explains it. */
+/**
+ * The free tier: the verdict, how much it is worth, and one sentence of why.
+ * The evidence behind that sentence — the measured signals, every finding,
+ * the next steps and the full provenance — is what the 402 sells.
+ */
 export async function GET(req: NextRequest, { params }: Params) {
   const started = Date.now();
-  const limited = tooManyFree(req);
+  // The console reads this on every page load and on every preset click; at the old
+  // 10/min a single demo run could rate-limit itself on camera.
+  const limited = tooManyFree(req, 30);
   if (limited) return limited;
   const { chain, agentId } = await params;
   try {
@@ -21,6 +27,7 @@ export async function GET(req: NextRequest, { params }: Params) {
       agent: r.agent.id,
       verdict: r.assessment.verdict,
       confidence: r.assessment.confidence,
+      headline: r.assessment.headline,
       provenance: { deployment: r.provenance.deployment, block: r.provenance.block },
       full: `/api/v1/agents/${chain}/${agentId}`,
     });
