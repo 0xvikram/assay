@@ -105,6 +105,17 @@ enough to refuse, because an owner running one has told you something about ever
 `npm run guard:demo` runs both paths live: an endpoint paying the Base farm's registered wallet
 is refused before signing; Assay's own paid route resolves to agent 9200, is allowed, and settles.
 
+## Writing the finding on-chain
+
+ERC-8004's `appendResponse` is permissionless, and the specification names *"any off-chain data
+intelligence aggregator tagging feedback as spam"* as an intended caller. `npm run tag:farm --
+base-sepolia:2851` reads an agent, and only if Assay itself finds it manufactured, appends a
+response to the dominant reviewer's latest entries: a file on IPFS stating the verdict, the
+evidence, the sample it was measured on and the deployment and block it was read at. Every call
+is simulated first, already-tagged entries are skipped, and `--dry-run` writes nothing. Assay can
+tag; it cannot revoke — only the writer can. Base Sepolia only for now. Evidence:
+`docs/evidence/on-chain-tags.md`.
+
 ## Routes
 
 | Route | Cost | What |

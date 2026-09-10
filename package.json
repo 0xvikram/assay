@@ -20,7 +20,8 @@
     "treasury:demo": "tsx --env-file=.env scripts/treasury-demo.ts",
     "agent:quote": "tsx --env-file=.env src/agent/quote.ts",
     "lending:demo": "tsx scripts/lending-demo.ts",
-    "guard:demo": "tsx --env-file=.env scripts/guard-demo.ts"
+    "guard:demo": "tsx --env-file=.env scripts/guard-demo.ts",
+    "tag:farm": "tsx --env-file=.env scripts/tag-farm.ts"
   },
   "devDependencies": {
     "@types/node": "^22.10.2",

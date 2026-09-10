@@ -130,6 +130,20 @@ export function fetchAgentsByAddress(chain: ChainEntry, address: string) {
   );
 }
 
+/**
+ * The latest reviews one address wrote about one agent, with any responses
+ * already appended to them — so a tag is never written to the same entry twice.
+ */
+export function fetchFeedbackFrom(chain: ChainEntry, agentId: string, client: string, first = 3) {
+  return query<{ feedbacks: { id: string; feedbackIndex: string; clientAddress: string; createdAt: string; responses: { responder: string }[] }[] }>(
+    chain,
+    `feedbacks(first: $first, where: { agent: $agent, clientAddress: $client, isRevoked: false }, orderBy: createdAt, orderDirection: desc) {
+       id feedbackIndex clientAddress createdAt responses { responder } }`,
+    { first, agent: `${chain.chainId}:${agentId}`, client: client.toLowerCase() },
+    "$first: Int, $agent: String!, $client: Bytes!",
+  );
+}
+
 export function fetchAgentsByOwner(chain: ChainEntry, owner: string) {
   return query<{ agents: AgentStub[] }>(
     chain,
