@@ -2,8 +2,9 @@ import type { ReactNode } from "react";
 import { Archivo, Newsreader, IBM_Plex_Mono } from "next/font/google";
 import "./globals.css";
 
-const archivo = Archivo({ subsets: ["latin"], weight: "variable", axes: ["wdth"], variable: "--font-archivo", display: "swap" });
-const newsreader = Newsreader({ subsets: ["latin"], style: ["italic"], weight: "variable", axes: ["opsz"], variable: "--font-newsreader", display: "swap" });
+// The three voices of docs/BRAND.md §2: Newsreader speaks, Archivo explains, Plex Mono is the machine.
+const archivo = Archivo({ subsets: ["latin"], weight: "variable", variable: "--font-archivo", display: "swap" });
+const newsreader = Newsreader({ subsets: ["latin"], style: ["normal", "italic"], weight: "variable", axes: ["opsz"], variable: "--font-newsreader", display: "swap" });
 const plex = IBM_Plex_Mono({ subsets: ["latin"], weight: ["400", "500"], variable: "--font-plex", display: "swap" });
 
 export const metadata = {
@@ -13,6 +14,8 @@ export const metadata = {
   openGraph: { title: "Assay", description: "Know who you're paying before you pay them.", images: [{ url: "/og.jpg", width: 1200, height: 630 }] },
   twitter: { card: "summary_large_image", title: "Assay", description: "Know who you're paying before you pay them.", images: ["/og.jpg"] },
 };
+
+export const viewport = { themeColor: "#eef3fa" };
 
 export default function RootLayout({ children }: { children: ReactNode }) {
   return (

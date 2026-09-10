@@ -25,7 +25,7 @@ export default function EscalationLink() {
     const q = new URLSearchParams({ mandate: "default", id: newId(), cap: cap.trim() || "$5.00", why: why.trim() || "raise the envelope" });
     const link = `${window.location.origin}/escalate?${q.toString()}`;
     setUrl(link); setCopied(false);
-    setSvg(await QRCode.toString(link, { type: "svg", margin: 1, errorCorrectionLevel: "M", color: { dark: "#0a0a8c", light: "#ffffff" } }));
+    setSvg(await QRCode.toString(link, { type: "svg", margin: 1, errorCorrectionLevel: "M", color: { dark: "#0b1a5c", light: "#ffffff" } }));
   }
 
   async function copy() {

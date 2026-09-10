@@ -155,6 +155,13 @@ Two subgraphs agreeing on a number means nothing unless they computed it the sam
 
 `npm run lending:demo` prints all of it live.
 
+## Design
+
+One look on every page — marble and cobalt: public-domain classical sculpture from The Met (CC0)
+in a navy duotone, engraved SVG objects, Newsreader / Archivo / IBM Plex Mono. The rules, the
+palette and the image sources are in `docs/BRAND.md`; `scripts/brand-images.mjs` is how a
+photograph becomes brand-safe.
+
 ## Repository
 
 ```

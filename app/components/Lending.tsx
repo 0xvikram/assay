@@ -1,5 +1,6 @@
 "use client";
 import { useEffect, useState } from "react";
+import { Column } from "./Art";
 
 type Source = { key: string; protocol: string; network: string; healthy: boolean; schemaVersion: string; methodologyVersion: string; unhealthyReason?: string };
 type Preview = {
@@ -22,10 +23,14 @@ const TONE: Record<string, string> = {
   REGISTRY_DRIFT: "var(--coral)",
 };
 
+/** Messari's network names, as a person says them. */
+const NET: Record<string, string> = { MAINNET: "ethereum", ARBITRUM_ONE: "arbitrum", MATIC: "polygon" };
+
 /**
  * Whether two subgraphs may be compared is free — it follows from the version
  * triple the registry already publishes. What they actually say costs $0.002,
- * because that is the read. This panel shows the half that carries the point.
+ * because that is the read. Each source stands as a column; the line between
+ * their capitals is the answer.
  */
 export default function Lending() {
   const [sources, setSources] = useState<Source[] | null>(null);
@@ -52,71 +57,79 @@ export default function Lending() {
     return () => { alive = false; };
   }, [pair]);
 
-  const tone = preview ? TONE[preview.comparability] ?? "var(--ink)" : "var(--ink)";
+  const tone = preview && !busy ? TONE[preview.comparability] ?? "var(--ink)" : "var(--ink-4)";
   const servable = sources?.filter((s) => s.healthy) ?? [];
   const refused = sources?.filter((s) => !s.healthy) ?? [];
+  const current = PAIRS[pair]!;
+  const who = (key: string) => {
+    const s = sources?.find((x) => x.key === key);
+    return s ? { name: s.protocol, net: NET[s.network] ?? s.network.toLowerCase() } : { name: key, net: "" };
+  };
+  const A = who(current.a);
+  const B = who(current.b);
 
   return (
-    <div className="glass lend" style={{ padding: "clamp(18px, 2.2vw, 30px)", display: "flex", flexDirection: "column", gap: 18, minWidth: 0 }}>
-      <div className="eyebrow" style={{ display: "flex", justifyContent: "space-between", gap: 12, fontSize: 11, letterSpacing: "0.12em" }}>
-        <span>Composition</span>
-        <span><span className="live-dot" aria-hidden="true" />{sources ? `${servable.length} servable · ${refused.length} refused` : "live · Messari"}</span>
-      </div>
+    <div className="lend-stage">
+      <div className="pillar pillar--a" aria-hidden="true"><div className="pillar-label">{A.name}<small>{A.net}</small></div><Column /></div>
+      <div className="pillar pillar--b" aria-hidden="true"><div className="pillar-label">{B.name}<small>{B.net}</small></div><Column /></div>
+      <div className="lend-line" style={{ color: tone }} aria-hidden="true">{busy ? "READING" : error ? "REFUSED" : preview?.comparability.replace("_", " ")}</div>
 
-      <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-        {PAIRS.map((p, i) => (
-          <button key={p.label} type="button" className="chip" onClick={() => setPair(i)}
-            style={i === pair ? { color: "var(--ink)", borderColor: "rgba(255,255,255,0.55)" } : undefined}>
-            {p.label}
-          </button>
-        ))}
-      </div>
-
-      {error && <div style={{ color: "var(--coral)", fontSize: 14 }}>refused: {error}</div>}
-      {busy && !error && (
-        <div className="skel-stack" style={{ borderTop: 0, paddingTop: 0 }} aria-label="reading both subgraphs">
-          <div className="skel" style={{ height: 17, width: "46%" }} />
-          <div className="skel" style={{ height: 13, width: "94%" }} />
-          <div className="skel" style={{ height: 13, width: "70%" }} />
-          <div className="lend-versions"><div className="skel" style={{ height: 64 }} /><div className="skel" style={{ height: 64 }} /></div>
+      <div className="glass" style={{ position: "relative", zIndex: 1, padding: "clamp(18px, 2.2vw, 28px)", display: "flex", flexDirection: "column", gap: 16, minWidth: 0 }}>
+        <div className="eyebrow" style={{ display: "flex", justifyContent: "space-between", gap: 12, fontSize: 11, letterSpacing: "0.12em" }}>
+          <span>Comparison</span>
+          <span><span className="live-dot" aria-hidden="true" />{sources ? `${servable.length} servable · ${refused.length} refused` : "live · Messari"}</span>
         </div>
-      )}
 
-      {preview && !busy && !error && (
-        <div className="fade-in" style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-          <div className="badge mono" style={{ fontSize: 17, fontWeight: 500, color: tone, overflowWrap: "anywhere" }}>
-            {preview.comparability}
-          </div>
-          <p style={{ margin: 0, fontSize: 14, lineHeight: 1.55, fontWeight: 300, color: "var(--ink-2)" }}>{preview.statement}</p>
-
-          <div className="lend-versions">
-            {preview.versions.map((v) => (
-              <div key={v.key} className="lend-ver">
-                <div className="mono" style={{ fontSize: 12, color: "var(--ink-3)", overflowWrap: "anywhere" }}>{v.key}</div>
-                <div className="mono" style={{ fontSize: 12, color: "var(--ink)" }}>
-                  schema <b style={{ fontWeight: 500 }}>{v.schemaVersion}</b> · methodology <b style={{ fontWeight: 500 }}>{v.methodologyVersion}</b>
-                </div>
-                <div className="mono" style={{ fontSize: 11, color: "var(--ink-4)" }}>{v.network}</div>
-              </div>
-            ))}
-          </div>
-
-          <div className="mono" style={{ fontSize: 11, lineHeight: 1.7, color: "var(--ink-4)", paddingTop: 12, borderTop: "1px solid var(--line)" }}>
-            comparability is free · the reconciled figures are $0.002 at <span style={{ color: "var(--ink-3)" }}>/api/v1/lending/market</span>
-          </div>
-        </div>
-      )}
-
-      {refused.length > 0 && (
-        <div style={{ paddingTop: 14, borderTop: "1px solid var(--line)", display: "flex", flexDirection: "column", gap: 8 }}>
-          <div className="eyebrow" style={{ fontSize: 11, letterSpacing: "0.12em" }}>Refused rather than guessed</div>
-          {refused.map((s) => (
-            <div key={s.key} className="mono" style={{ fontSize: 11, lineHeight: 1.6, color: "var(--ink-4)" }}>
-              <span style={{ color: "var(--coral)" }}>{s.key}</span> — {s.unhealthyReason}
-            </div>
+        <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+          {PAIRS.map((p, i) => (
+            <button key={p.label} type="button" className="chip" aria-pressed={i === pair} onClick={() => setPair(i)}>{p.label}</button>
           ))}
         </div>
-      )}
+
+        {error && <div style={{ color: "var(--coral)", fontSize: 14 }}>refused: {error}</div>}
+        {busy && !error && (
+          <div className="skel-stack" style={{ borderTop: 0, paddingTop: 0 }} aria-label="reading both subgraphs">
+            <div className="skel" style={{ height: 17, width: "46%" }} />
+            <div className="skel" style={{ height: 13, width: "94%" }} />
+            <div className="skel" style={{ height: 13, width: "70%" }} />
+            <div className="lend-versions"><div className="skel" style={{ height: 64 }} /><div className="skel" style={{ height: 64 }} /></div>
+          </div>
+        )}
+
+        {preview && !busy && !error && (
+          <div className="fade-in" style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+            <div className="badge mono" style={{ fontSize: 15, fontWeight: 500, color: tone, overflowWrap: "anywhere" }}>{preview.comparability}</div>
+            <p style={{ margin: 0, fontSize: 14, lineHeight: 1.6, color: "var(--ink-2)" }}>{preview.statement}</p>
+            <div className="lend-versions">
+              {preview.versions.map((v) => (
+                <div key={v.key} className="lend-ver">
+                  <div className="mono" style={{ fontSize: 12, fontWeight: 500, color: "var(--ink)", overflowWrap: "anywhere" }}>{v.key}</div>
+                  <div className="mono" style={{ fontSize: 12, color: "var(--ink-2)" }}>
+                    schema <b style={{ fontWeight: 500 }}>{v.schemaVersion}</b> · methodology <b style={{ fontWeight: 500 }}>{v.methodologyVersion}</b>
+                  </div>
+                  <div className="mono" style={{ fontSize: 11, color: "var(--ink-4)" }}>{v.network}</div>
+                </div>
+              ))}
+            </div>
+            <div className="mono" style={{ fontSize: 11, lineHeight: 1.7, color: "var(--ink-3)", paddingTop: 12, borderTop: "1px solid var(--line)" }}>
+              comparability is free · the reconciled figures are $0.002 at <span style={{ color: "var(--ink)" }}>/api/v1/lending/market</span>
+            </div>
+          </div>
+        )}
+
+        {refused.length > 0 && (
+          <details style={{ paddingTop: 12, borderTop: "1px solid var(--line)" }}>
+            <summary className="eyebrow" style={{ fontSize: 11, letterSpacing: "0.12em", cursor: "pointer" }}>Refused rather than guessed · {refused.length}</summary>
+            <div style={{ display: "flex", flexDirection: "column", gap: 6, marginTop: 10 }}>
+              {refused.map((s) => (
+                <div key={s.key} className="mono" style={{ fontSize: 11, lineHeight: 1.6, color: "var(--ink-3)" }}>
+                  <span style={{ color: "var(--coral)" }}>{s.key}</span> — {s.unhealthyReason}
+                </div>
+              ))}
+            </div>
+          </details>
+        )}
+      </div>
     </div>
   );
 }

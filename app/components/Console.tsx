@@ -90,7 +90,7 @@ export default function Console() {
   const color = preview ? COLOR[preview.verdict] ?? "var(--ink)" : "var(--ink)";
 
   return (
-    <div className="glass" style={{ display: "flex", flexDirection: "column", gap: 18, padding: "clamp(18px, 2.2vw, 30px)", boxShadow: "0 40px 90px rgba(0,0,60,0.45)", minWidth: 0 }}>
+    <div className="glass" style={{ display: "flex", flexDirection: "column", gap: 18, padding: "clamp(18px, 2.2vw, 30px)", minWidth: 0 }}>
       <div className="eyebrow" style={{ display: "flex", justifyContent: "space-between", gap: 12, fontSize: 11, letterSpacing: "0.12em" }}>
         <span>Console</span><span><span className="live-dot" aria-hidden="true" />live · The Graph</span>
       </div>
@@ -147,7 +147,7 @@ export default function Console() {
               {accepts.map((a) => (
                 <div key={a.network} className="rail-row">
                   <span className="mono" style={{ fontSize: 13, color: "var(--ink)" }}>{RAIL[a.network] ?? a.network} <span style={{ fontSize: 11, color: "var(--ink-4)" }}>{a.network}</span></span>
-                  <span className="mono" style={{ fontSize: 13, color: "var(--gold)", whiteSpace: "nowrap" }}>{price(a)}</span>
+                  <span className="mono" style={{ fontSize: 13, fontWeight: 500, color: "var(--cobalt)", whiteSpace: "nowrap" }}>{price(a)}</span>
                 </div>
               ))}
             </div>
