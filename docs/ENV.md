@@ -107,7 +107,7 @@ Each prints the exact lines to paste. Then fund the Privy wallet address it prin
 
 ```
 X402_FACILITATOR_URL=      HEDERA_MIRROR_URL=      X402_ASSET=            BASE_SEPOLIA_RPC_URL=
-IPFS_API_URL=              ARC_SELLER_ADDRESS=     ARC_GATEWAY_URL=       INTENDED_SPEND=
+IPFS_API_URL=              ARC_SELLER_ADDRESS  ← **must be set on the host**: without it (or SERVICE_EVM_PRIVATE_KEY) the 402 silently drops the Arc and Base Sepolia rails and advertises Hedera only=     ARC_GATEWAY_URL=       INTENDED_SPEND=
 TREASURY_ALLOWLIST=        UNISWAP_API_URL=        SERVICE_EVM_ADDRESS=
 ```
 
