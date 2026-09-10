@@ -82,6 +82,29 @@ npm run lending:demo                              # all three reconciliation out
 npm run mcp                                       # stdio MCP server
 ```
 
+## Check before you pay — the x402 guard
+
+One line on any x402 client, and it refuses to pay a farm:
+
+```ts
+import { withAssayGuard } from "./src/guard";
+withAssayGuard(client); // client is your x402Client
+```
+
+Before the client signs anything, the guard reads the 402's `payTo` and resource URL, asks
+Assay which registered agent that is (`/api/v1/lookup`) and what its reputation is worth
+(`/api/v1/preview`), and aborts the payment if the verdict is one it refuses. The refusal comes
+before signing, so no authorization ever exists. It uses Assay's free routes through a plain
+`fetch`, never the wrapped client, so checking a counterparty cannot itself trigger a payment.
+
+Default policy: refuse `WASH_REPUTATION_DETECTED`; allow a payee with no ERC-8004 registration
+(unknown is not the same as bad — `refuseUnknown` to change); refuse if Assay cannot be reached
+(a guard that fails open is a silent bypass — `failOpen` to change). One farm at an address is
+enough to refuse, because an owner running one has told you something about every agent it owns.
+
+`npm run guard:demo` runs both paths live: an endpoint paying the Base farm's registered wallet
+is refused before signing; Assay's own paid route resolves to agent 9200, is allowed, and settles.
+
 ## Routes
 
 | Route | Cost | What |
@@ -92,11 +115,12 @@ npm run mcp                                       # stdio MCP server
 | `GET /api/v1/corroborate/{owner or chain:id}` | paid ×4 | the owner across every healthy chain |
 | `GET /api/v1/lending/market?asset=&sources=a,b` | paid | reconcile one market across two Messari subgraphs, or refuse |
 | `GET /api/v1/lending/sources` | free | the lending registry with schema and methodology versions |
+| `GET /api/v1/lookup?address=&url=` | free | which registered agents a payment would go to — what the guard asks first |
 | `GET /api/v1/trail` · `GET /api/v1/mandate/{id}/approvals` | free | the ledger, from the mirror node |
 | `POST /api/mcp` | mixed | Streamable HTTP MCP; `assay_agent` paid, `assay_preview` free |
 | `GET /api/openapi` · `/api/v1/chains` · `/api/healthz` | free | |
 
-Every paid route's 402 offers **three rails**: `hedera:testnet` (Blocky402), `eip155:5042002` Arc (Circle Gateway), `eip155:84532` Base Sepolia (x402.org). Free routes allow 10 requests/min per IP.
+Every paid route's 402 offers **three rails**: `hedera:testnet` (Blocky402), `eip155:5042002` Arc (Circle Gateway), `eip155:84532` Base Sepolia (x402.org). Free routes allow 10–60 requests/min per IP depending on the route; the paid routes are their own limit.
 
 ## Adding a source
 

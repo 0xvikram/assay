@@ -117,6 +117,19 @@ export function fetchAgentsByEndpoint(chain: ChainEntry, candidates: string[]) {
   );
 }
 
+/**
+ * Agents at an address, as owner or declared wallet. A 402 names who gets paid;
+ * this is how that address becomes an identity with a reputation.
+ */
+export function fetchAgentsByAddress(chain: ChainEntry, address: string) {
+  return query<{ agents: AgentStub[] }>(
+    chain,
+    `agents(first: 20, where: { or: [{ owner: $a }, { agentWallet: $a }] }, orderBy: createdAt, orderDirection: asc) { ${STUB} }`,
+    { a: address.toLowerCase() },
+    "$a: Bytes!",
+  );
+}
+
 export function fetchAgentsByOwner(chain: ChainEntry, owner: string) {
   return query<{ agents: AgentStub[] }>(
     chain,

@@ -92,6 +92,18 @@ export function openapi(origin: string) {
         },
       },
       "/api/v1/lending/sources": { get: { operationId: "listLendingSources", summary: "The lending registry with schema and methodology versions", responses: { "200": { description: "Sources", content: { "application/json": { schema: { $ref: "#/components/schemas/LendingSources" } } } }, "429": err("Free-tier rate limit") } } },
+      "/api/v1/lookup": {
+        get: {
+          operationId: "lookupCounterparty",
+          summary: "Which registered agents a payment would go to (free)",
+          description: "Joins a 402's payTo address and resource URL to ERC-8004 registrations by owner, declared wallet and endpoint, across every healthy chain. Used by the x402 guard before any payment is signed.",
+          parameters: [
+            { name: "address", in: "query", required: false, description: "The payTo address from a 402.", schema: { type: "string", examples: ["0x69747c4ce6185d21a33b3bcdba980d659600ac7b"] } },
+            { name: "url", in: "query", required: false, description: "The paid resource's URL.", schema: { type: "string", format: "uri" } },
+          ],
+          responses: { "200": { description: "Matching registrations", content: { "application/json": { schema: { $ref: "#/components/schemas/CounterpartyLookup" } } } }, "400": err("Neither address nor url given"), "429": err("Free-tier rate limit") },
+        },
+      },
       "/api/v1/chains": { get: { operationId: "listChains", summary: "The chain registry with health flags", responses: { "200": { description: "Chains" }, "429": err("Free-tier rate limit") } } },
       "/api/healthz": { get: { operationId: "health", summary: "Liveness", responses: { "200": { description: "OK" }, "503": err("Not ready") } } },
     },
@@ -155,6 +167,7 @@ export function openapi(origin: string) {
           },
         },
         LendingSources: { type: "object", properties: { sources: { type: "array", items: { type: "object" } }, note: { type: "string" } } },
+        CounterpartyLookup: { type: "object", properties: { address: { type: ["string", "null"] }, url: { type: ["string", "null"] }, matches: { type: "array", items: { type: "object", properties: { ref: { type: "string" }, chain: { type: "string" }, chainId: { type: "integer" }, agentId: { type: "string" }, name: { type: ["string", "null"] }, matchedOn: { type: "string", enum: ["owner", "agentWallet", "endpoint"] } } } }, chainsQueried: { type: "array", items: { type: "string" } } } },
         Error: { type: "object", required: ["error"], properties: { error: { type: "string" }, detail: { type: "string" } } },
       },
     },
