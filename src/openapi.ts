@@ -23,7 +23,7 @@ export function openapi(origin: string) {
       version: "0.1.0",
       summary: "Is this agent's reputation real?",
       description:
-        "A pre-flight for agent payments. Reads the ERC-8004 registries through The Graph and returns a verdict — VERIFIED, UNPROVEN or WASH_REPUTATION_DETECTED — with the evidence, what would change it, and a provenance envelope naming the exact subgraph deployment and block. Confidence is earned only from payment-backed reviews by independent addresses.",
+        "A pre-flight for agent payments. Reads the ERC-8004 registries through The Graph and returns a verdict — VERIFIED, UNPROVEN or WASH_REPUTATION_DETECTED — with the evidence, what would change it, and a provenance envelope naming the exact subgraph deployment and block. Confidence is earned only from payment-backed reviews by independent addresses. The same engine reconciles lending markets across Messari standardized subgraphs, and refuses to compare sources whose schema or methodology versions differ.",
       license: { name: "MIT", identifier: "MIT" },
     },
     servers: [{ url: origin }],
@@ -65,6 +65,33 @@ export function openapi(origin: string) {
           responses: { "200": { description: "Cross-chain report", content: { "application/json": { schema: { $ref: "#/components/schemas/Corroboration" } } } }, "404": err("Unknown reference") },
         },
       },
+      "/api/v1/lending/market": {
+        get: {
+          operationId: "compareLendingMarket",
+          summary: "Reconcile one lending market across two Messari subgraphs, or refuse",
+          description: "Compares only when both sources share schemaVersion and methodologyVersion, re-read from each subgraph on every request. Otherwise returns METHODOLOGY_MISMATCH or SCHEMA_MISMATCH and no number. One source returns a snapshot instead.",
+          parameters: [
+            { name: "asset", in: "query", required: false, description: "Token symbol. Defaults to USDC.", schema: { type: "string", examples: ["USDC", "WETH"] } },
+            { name: "sources", in: "query", required: true, description: "One or two registry keys, comma-separated.", schema: { type: "string", examples: ["compound-v3-ethereum,spark-lend-ethereum"] } },
+          ],
+          responses: {
+            "200": { description: "The comparison, each side with its own deployment and block", content: { "application/json": { schema: { $ref: "#/components/schemas/LendingReport" } } } },
+            "400": err("Missing or too many sources"), "404": err("Unknown lending source"), "502": err("Gateway error"), "503": err("Source not servable"),
+          },
+        },
+      },
+      "/api/v1/lending/preview": {
+        get: {
+          operationId: "previewLendingComparability",
+          summary: "Whether two lending sources may be compared at all (free tier)",
+          parameters: [
+            { name: "a", in: "query", required: true, schema: { type: "string", examples: ["compound-v3-ethereum"] } },
+            { name: "b", in: "query", required: true, schema: { type: "string", examples: ["spark-lend-ethereum"] } },
+          ],
+          responses: { "200": { description: "Comparability and the versions that decided it", content: { "application/json": { schema: { $ref: "#/components/schemas/ComparabilityPreview" } } } }, "400": err("Missing a or b"), "404": err("Unknown lending source"), "429": err("Free-tier rate limit") },
+        },
+      },
+      "/api/v1/lending/sources": { get: { operationId: "listLendingSources", summary: "The lending registry with schema and methodology versions", responses: { "200": { description: "Sources", content: { "application/json": { schema: { $ref: "#/components/schemas/LendingSources" } } } }, "429": err("Free-tier rate limit") } } },
       "/api/v1/chains": { get: { operationId: "listChains", summary: "The chain registry with health flags", responses: { "200": { description: "Chains" }, "429": err("Free-tier rate limit") } } },
       "/api/healthz": { get: { operationId: "health", summary: "Liveness", responses: { "200": { description: "OK" }, "503": err("Not ready") } } },
     },
@@ -100,6 +127,34 @@ export function openapi(origin: string) {
         Preview: { type: "object", properties: { agent: { type: "string" }, verdict: { $ref: "#/components/schemas/Verdict" }, confidence: { type: "integer" }, provenance: { type: "object" }, full: { type: "string" } } },
         Resolve: { type: "object", properties: { input: { type: "string" }, candidates: { type: "array", items: { type: "string" } }, matches: { type: "array", items: { type: "object" } }, chainsQueried: { type: "array", items: { type: "string" } }, truncated: { type: "array", items: { type: "string" } }, failures: { type: "array", items: { type: "object" } } } },
         Corroboration: { type: "object", properties: { owner: { type: "string" }, chains: { type: "array", items: { type: "object" } }, findings: { type: "array", items: { $ref: "#/components/schemas/Finding" } }, consistent: { type: "boolean" } } },
+        Comparability: { type: "string", enum: ["COMPARABLE", "SCHEMA_MISMATCH", "METHODOLOGY_MISMATCH", "REGISTRY_DRIFT"] },
+        LendingReport: {
+          type: "object", required: ["asset", "comparison", "provenance", "readAt", "tolerance"],
+          properties: {
+            asset: { type: "string" },
+            comparison: {
+              type: "object", required: ["comparability", "reconciliation", "statement"],
+              properties: {
+                comparability: { $ref: "#/components/schemas/Comparability" },
+                reconciliation: { type: "string", enum: ["AGREE", "DISAGREE", "NOT_ATTEMPTED"] },
+                statement: { type: "string" },
+                deltas: { type: "array", items: { type: "object", properties: { field: { type: "string" }, a: { type: "number" }, b: { type: "number" }, relDiff: { type: "number" }, withinTolerance: { type: "boolean" } } } },
+                sources: { type: "array", items: { type: "object" } },
+              },
+            },
+            provenance: { type: "array", items: { type: "object", properties: { source: { type: "string" }, deployment: { type: "string" }, block: { type: "integer" }, hasIndexingErrors: { type: "boolean" } } } },
+            readAt: { type: "string" }, tolerance: { type: "number" },
+          },
+        },
+        ComparabilityPreview: {
+          type: "object", required: ["a", "b", "comparability", "statement", "versions"],
+          properties: {
+            a: { type: "string" }, b: { type: "string" }, comparability: { $ref: "#/components/schemas/Comparability" }, statement: { type: "string" },
+            versions: { type: "array", items: { type: "object", properties: { key: { type: "string" }, schemaVersion: { type: "string" }, methodologyVersion: { type: "string" }, network: { type: "string" } } } },
+            readAt: { type: "string" },
+          },
+        },
+        LendingSources: { type: "object", properties: { sources: { type: "array", items: { type: "object" } }, note: { type: "string" } } },
         Error: { type: "object", required: ["error"], properties: { error: { type: "string" }, detail: { type: "string" } } },
       },
     },
