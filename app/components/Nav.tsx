@@ -14,6 +14,7 @@ export default function Nav() {
       <Link href="/" className="wordmark"><Mark /><span>ASSAY</span></Link>
       <div className="nav-links">
         <Link href="/#console">Console</Link>
+        <Link href="/#composition">Composition</Link>
         <Link href="/#rails">Rails</Link>
         <Link href="/#receipt">Receipt</Link>
         <Link href="/trail">Ledger</Link>

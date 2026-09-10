@@ -99,6 +99,8 @@ a:hover { color: var(--gold); }
 .stats { display: flex; gap: clamp(20px, 3vw, 40px); flex-wrap: wrap; padding-top: 12px; border-top: 1px solid var(--line); }
 .console-form { display: flex; gap: 10px; }
 .trail-list { display: flex; flex-direction: column; gap: 10px; }
+.lend-versions { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+.lend-ver { display: flex; flex-direction: column; gap: 3px; min-width: 0; padding: 12px 14px; border: 1px solid var(--line); border-radius: 12px; }
 .trail-row { display: grid; grid-template-columns: 46px 118px minmax(0, 1fr) auto auto; gap: 16px; align-items: center; padding: 14px 18px; border-radius: 16px; color: inherit; }
 .trail-row--compact { grid-template-columns: 46px minmax(0, 1fr) auto auto; }
 .trail-row--compact .trail-when { display: none; }
@@ -146,6 +148,7 @@ a:hover { color: var(--gold); }
   .trail-row--compact .trail-main { grid-column: 1 / -1; }
 }
 @media (max-width: 760px) {
+  .lend-versions { grid-template-columns: 1fr; }
   /* Thumbs, not cursors: the preset chips were 28px tall, footer links 15px. */
   .chip { padding: 9px 14px; }
   .footer-col a { padding: 5px 0; }

@@ -1,6 +1,7 @@
 import Nav from "./components/Nav";
 import Console from "./components/Console";
 import Trail from "./components/Trail";
+import Lending from "./components/Lending";
 import { Mark } from "./components/Nav";
 
 export default function Home() {
@@ -53,11 +54,23 @@ export default function Home() {
         </div>
       </section>
 
+      <section id="composition" className="dots section-tight">
+        <div className="wrap grid-2">
+          <div style={{ display: "flex", flexDirection: "column", gap: 22 }}>
+            <div className="eyebrow">02 · Composition</div>
+            <h2 className="h-display t-h2">Two subgraphs agreeing means nothing <span className="serif">until they agree on what the number is.</span></h2>
+            <p className="t-lead" style={{ maxWidth: 520 }}>Messari versions that intent: <span className="mono">schemaVersion</span> says what the fields are, <span className="mono">methodologyVersion</span> says how they were derived. Assay re-reads both from every subgraph on every request and compares only when both match — otherwise it names the version that differed and returns no number at all.</p>
+            <p className="t-lead" style={{ maxWidth: 520 }}>The same engine, pointed at a different schema family. Adding a protocol is one row in <span className="mono">registry/lending.json</span>, never a code path.</p>
+          </div>
+          <Lending />
+        </div>
+      </section>
+
       <section id="rails" className="dots section-tight">
         <div className="wrap">
           <div style={{ display: "flex", alignItems: "flex-end", justifyContent: "space-between", gap: 32, marginBottom: 32, flexWrap: "wrap" }}>
             <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-              <div className="eyebrow">02 · One 402, three rails</div>
+              <div className="eyebrow">03 · One 402, three rails</div>
               <h2 className="h-display t-h2">The client picks the rail <span className="serif">it can pay on.</span></h2>
             </div>
             <div className="mono" style={{ maxWidth: 360, fontSize: 12, lineHeight: 1.7, color: "var(--ink-3)" }}>same engine · same tiers · every settlement leaves a receipt on Hedera Consensus Service</div>
@@ -86,7 +99,7 @@ export default function Home() {
   }
 }`}</pre>
           <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
-            <div className="eyebrow">03 · The receipt</div>
+            <div className="eyebrow">04 · The receipt</div>
             <h2 className="h-display t-h2">Reviews are free to write. <span className="serif">That&apos;s why they&apos;re worthless.</span></h2>
             <p className="t-lead" style={{ maxWidth: 520 }}>After an agent pays through Assay, it writes the one review that can&apos;t be faked — ERC-8004 feedback whose file carries the settlement as proof of payment. A good agent earns its way to VERIFIED. A farm can&apos;t buy its way there for pocket change.</p>
             <div className="mono" style={{ fontSize: 12, lineHeight: 1.7, color: "var(--ink-4)" }}>99.4% of ERC-8004 feedback carries no proof of payment — arXiv:2606.26028</div>
@@ -98,7 +111,7 @@ export default function Home() {
         <div className="wrap" style={{ display: "flex", flexDirection: "column", gap: 24 }}>
           <div style={{ display: "flex", alignItems: "flex-end", justifyContent: "space-between", gap: 32, flexWrap: "wrap" }}>
             <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-              <div className="eyebrow">04 · The ledger</div>
+              <div className="eyebrow">05 · The ledger</div>
               <h2 className="h-display t-h2">Watch an agent <span className="serif">pay.</span></h2>
             </div>
             <a href="/trail" className="pill">Full ledger</a>
