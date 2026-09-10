@@ -5,6 +5,7 @@ import { ExactHederaScheme } from "@x402/hedera/exact/client";
 import { decide, enforce, loadMandate, type Ledger } from "./mandate";
 import { writeReceipt } from "./receipt";
 import { settleWithCounterparty } from "../treasury/privy";
+import { submitMessage } from "../hcs";
 
 /**
  * The reference paying agent. It does exactly one thing an agent about to pay
@@ -159,6 +160,21 @@ if (proceed) {
       console.log(`     ${dim(out.refusedBecause ?? "")}`);
       console.log(`     ${dim("this is the control working: the allowlist and cap are owned by a key quorum, not by this process")}`);
     }
+    // Onto the ledger either way: a refusal is the control working, and it belongs
+    // next to the payment that prompted it rather than only in this terminal.
+    const seq = await submitMessage({
+      type: "assay.settlement.v1",
+      ref,
+      verdict: report.assessment.verdict,
+      recipient,
+      valueWei: out.valueWei,
+      network: "eip155:84532",
+      allowed: out.allowed,
+      txHash: out.hash ?? null,
+      refusedBecause: out.allowed ? null : out.refusedBecause ?? null,
+      ts: new Date().toISOString(),
+    });
+    console.log(`     ${dim(seq != null ? `recorded on HCS seq ${seq} — visible on /trail` : "not recorded on HCS (topic unconfigured)")}`);
   }
 }
 

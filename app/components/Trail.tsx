@@ -3,7 +3,8 @@ import { useEffect, useRef, useState } from "react";
 
 type Entry =
   | { kind: "receipt"; seq: number; at: string; messageUrl: string; route: string; ref: string; verdict: string; payer: string | null; amount: string | null; asset: string | null; network: string; settlementTxId: string | null; settlementUrl: string | null }
-  | { kind: "approval"; seq: number; at: string; messageUrl: string; mandateId: string; escalationId: string; newCap: string; credential: string };
+  | { kind: "approval"; seq: number; at: string; messageUrl: string; mandateId: string; escalationId: string; newCap: string; credential: string }
+  | { kind: "settlement"; seq: number; at: string; messageUrl: string; ref: string; verdict: string; recipient: string; valueWei: string; network: string; allowed: boolean; txHash: string | null; txUrl: string | null; refusedBecause: string | null };
 
 const VERDICT: Record<string, string> = { VERIFIED: "var(--mint)", UNPROVEN: "var(--gold)", WASH_REPUTATION_DETECTED: "var(--coral)" };
 const RAIL: Record<string, string> = { "hedera:testnet": "Hedera", "eip155:5042002": "Arc", "eip155:84532": "Base Sepolia" };
@@ -13,6 +14,9 @@ function amountLabel(e: Extract<Entry, { kind: "receipt" }>) {
   if (e.amount) return `${(Number(e.amount) / 1e6).toFixed(3)} USDC`;
   return "";
 }
+
+/** The counterparty leg is priced in wei; a person reads ETH. */
+const eth = (wei: string) => `${(Number(wei) / 1e18).toLocaleString(undefined, { maximumFractionDigits: 6 })} ETH`;
 
 const when = (at: string) => new Date(at).toLocaleString(undefined, { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" });
 
@@ -77,7 +81,7 @@ export default function Trail({ limit = 8, compact = false }: { limit?: number; 
       {data.entries.map((e) => (
         <a
           key={e.seq}
-          href={e.kind === "receipt" && e.settlementUrl ? e.settlementUrl : e.messageUrl}
+          href={e.kind === "receipt" && e.settlementUrl ? e.settlementUrl : e.kind === "settlement" && e.txUrl ? e.txUrl : e.messageUrl}
           target="_blank"
           rel="noreferrer"
           className={`glass trail-row${compact ? " trail-row--compact" : ""}`}
@@ -95,6 +99,18 @@ export default function Trail({ limit = 8, compact = false }: { limit?: number; 
               </span>
               <span className="mono trail-rail">{RAIL[e.network] ?? e.network}</span>
               <span className="mono trail-amt">{amountLabel(e)}</span>
+            </>
+          ) : e.kind === "settlement" ? (
+            <>
+              <span className="trail-main">
+                <span>
+                  <span style={{ color: e.allowed ? "var(--mint)" : "var(--coral)" }}>{e.allowed ? "PAID" : "REFUSED BY POLICY"}</span>
+                  <span style={{ color: "var(--ink-3)" }}> · {e.ref}</span>
+                </span>
+                <span className="mono trail-sub">{e.allowed ? `sent to ${e.recipient}` : `mandate said pay ${e.verdict}; the policy refused before anything was signed`}</span>
+              </span>
+              <span className="mono trail-rail">Privy</span>
+              <span className="mono trail-amt" style={e.allowed ? undefined : { color: "var(--ink-4)", textDecoration: "line-through" }}>{eth(e.valueWei)}</span>
             </>
           ) : (
             <>

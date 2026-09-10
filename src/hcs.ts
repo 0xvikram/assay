@@ -56,7 +56,29 @@ export interface Approval {
   ts: string;
 }
 
-export type TopicMessage = Receipt | Approval;
+/**
+ * The counterparty leg. The mandate decided the agent should pay; the Privy
+ * policy — owned by a key quorum, enforced outside the agent — decided whether
+ * it may. Written either way, because a refusal is the control working and
+ * belongs on the ledger next to the payment that prompted it.
+ */
+export interface Settlement {
+  type: "assay.settlement.v1";
+  /** The counterparty, as chain:agentId. */
+  ref: string;
+  /** The verdict the agent paid Assay for before deciding to pay the counterparty. */
+  verdict: string;
+  /** The wallet the counterparty declared in its own ERC-8004 registration. */
+  recipient: string;
+  valueWei: string;
+  network: string;
+  allowed: boolean;
+  txHash: string | null;
+  refusedBecause: string | null;
+  ts: string;
+}
+
+export type TopicMessage = Receipt | Approval | Settlement;
 
 /** Every message on the topic goes through here; the type field says what it is. */
 export async function submitMessage(msg: TopicMessage): Promise<number | null> {

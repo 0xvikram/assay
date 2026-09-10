@@ -27,6 +27,10 @@ export async function GET(req: NextRequest) {
           const settlementUrl = network.startsWith("hedera") && x.settlementTxId ? `https://hashscan.io/testnet/transaction/${encodeURIComponent(x.settlementTxId)}` : null;
           return { ...base, kind: "receipt" as const, route: x.route, ref: x.ref, verdict: x.verdict, payer: x.payer, amount: x.amount, asset: x.asset, network, settlementTxId: x.settlementTxId, settlementUrl };
         }
+        if (x.type === "assay.settlement.v1") {
+          const txUrl = x.txHash ? `https://sepolia.basescan.org/tx/${x.txHash}` : null;
+          return { ...base, kind: "settlement" as const, ref: x.ref, verdict: x.verdict, recipient: x.recipient, valueWei: x.valueWei, network: x.network, allowed: x.allowed, txHash: x.txHash, txUrl, refusedBecause: x.refusedBecause };
+        }
         return { ...base, kind: "approval" as const, mandateId: x.mandateId, escalationId: x.escalationId, newCap: x.newCap, credential: x.credential };
       });
     return NextResponse.json({ topic, topicUrl: `https://hashscan.io/testnet/topic/${topic}`, entries });
