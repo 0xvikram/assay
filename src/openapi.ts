@@ -104,10 +104,37 @@ export function openapi(origin: string) {
           responses: { "200": { description: "Matching registrations", content: { "application/json": { schema: { $ref: "#/components/schemas/CounterpartyLookup" } } } }, "400": err("Neither address nor url given"), "429": err("Free-tier rate limit") },
         },
       },
+      "/api/v1/badge/{chain}/{agentId}": {
+        get: {
+          operationId: "agentBadge",
+          summary: "An embeddable SVG badge with the agent's current verdict (free)",
+          description: "Cached at the edge for fifteen minutes. Link it to /agent/{chain}/{agentId}, the public page that shows the path to VERIFIED.",
+          parameters: [
+            { name: "chain", in: "path", required: true, schema: { type: "string", examples: ["base-sepolia"] } },
+            { name: "agentId", in: "path", required: true, schema: { type: "string", examples: ["9200"] } },
+          ],
+          responses: { "200": { description: "SVG", content: { "image/svg+xml": {} } }, "429": err("Free-tier rate limit") },
+        },
+      },
+      "/api/v1/policy/{policyId}": {
+        get: {
+          operationId: "getPolicy",
+          summary: "A company's saved payment policy, as the guard reads it (free)",
+          description: "What the company's agents do with each verdict: pay, pay up to a cap, refuse, or ask a person, plus an approval threshold in dollars. Edited in the dashboard.",
+          parameters: [{ name: "policyId", in: "path", required: true, schema: { type: "string", examples: ["pol_5b6408e6d9bf9f70"] } }],
+          responses: { "200": { description: "The rules and when they were saved" }, "404": err("No policy saved under that id"), "429": err("Free-tier rate limit") },
+        },
+      },
+      "/api/v1/trail/export": {
+        get: { operationId: "exportLedger", summary: "The whole ledger as CSV, for audit (free)", responses: { "200": { description: "CSV", content: { "text/csv": {} } }, "429": err("Free-tier rate limit") } },
+      },
       "/api/v1/chains": { get: { operationId: "listChains", summary: "The chain registry with health flags", responses: { "200": { description: "Chains" }, "429": err("Free-tier rate limit") } } },
       "/api/healthz": { get: { operationId: "health", summary: "Liveness", responses: { "200": { description: "OK" }, "503": err("Not ready") } } },
     },
     components: {
+      securitySchemes: {
+        apiKey: { type: "http", scheme: "bearer", description: "An API key from the dashboard (ak_test_…). Accepted on every paid route instead of an x402 payment; each call is metered on the ledger and billed monthly." },
+      },
       schemas: {
         Verdict: { type: "string", enum: ["VERIFIED", "UNPROVEN", "WASH_REPUTATION_DETECTED"] },
         Finding: {

@@ -1,4 +1,5 @@
 import type { x402Client } from "@x402/core/client";
+import { decide, type PolicyRules } from "../saas/policy";
 
 export type GuardVerdict = "VERIFIED" | "UNPROVEN" | "WASH_REPUTATION_DETECTED";
 
@@ -59,7 +60,39 @@ export function decideGuard(x: GuardFindings, p: GuardPolicy): GuardDecision {
   return { ...base, action: "allow", reason: `checked ${x.checked.map((c) => `${c.ref} ${c.verdict}`).join(", ")}` };
 }
 
+const RANK: Record<GuardVerdict, number> = { WASH_REPUTATION_DETECTED: 3, UNPROVEN: 2, VERIFIED: 1 };
+
+/**
+ * The same decision, driven by a company's saved policy instead of a refuse
+ * list: amounts, caps and "a person decides" included. The guard cannot pause
+ * for a person, so "approve" refuses here, saying why — the paying agent's own
+ * flow is what raises the escalation.
+ */
+export function decideWithRules(x: GuardFindings, rules: PolicyRules, amountUsd: number | null, failOpen = false): GuardDecision {
+  const base = { payTo: x.payTo, resource: x.resource, checked: x.checked };
+  const worst = x.checked.reduce<Checked | null>((w, c) => (!w || RANK[c.verdict] > RANK[w.verdict] ? c : w), null);
+  if (x.unreachable && worst?.verdict !== "WASH_REPUTATION_DETECTED") {
+    return failOpen
+      ? { ...base, action: "allow", reason: `could not check the counterparty (${x.unreachable}); paying anyway because failOpen is set` }
+      : { ...base, action: "refuse", reason: `could not check the counterparty (${x.unreachable}); refusing rather than paying blind` };
+  }
+  const d = decide(rules, x.unregistered || !worst ? null : worst.verdict, amountUsd);
+  const who = worst ? `${worst.ref} is ${worst.verdict}` : `${x.payTo} isn't a registered agent`;
+  if (d.action === "pay") return { ...base, action: "allow", reason: `${who}; ${d.why}` };
+  return { ...base, action: "refuse", reason: d.action === "approve" ? `${who}; needs a person: ${d.why}` : `${who}; ${d.why}` };
+}
+
+/** What a payment is worth in dollars, when it is in a dollar stablecoin; otherwise unknown. */
+export function amountUsd(r: { asset?: unknown; amount?: unknown; extra?: unknown }): number | null {
+  const name = String((r.extra as { name?: unknown } | undefined)?.name ?? "").toUpperCase();
+  const stable = name.includes("USD") || r.asset === "0.0.429274";
+  const n = Number(r.amount);
+  return stable && Number.isFinite(n) ? n / 1e6 : null;
+}
+
 export interface GuardOptions extends Partial<GuardPolicy> {
+  /** A policy id from the dashboard (pol_…). When set, its saved rules decide, and refuse/refuseUnknown are ignored. */
+  policy?: string;
   /** Where Assay lives. Defaults to ASSAY_URL, then the public deployment. */
   base?: string;
   /** How many matched registrations to check. A URL can be claimed by dozens. */
@@ -119,10 +152,31 @@ export function withAssayGuard(client: x402Client, opts: GuardOptions = {}): x40
   const base = (opts.base ?? process.env.ASSAY_URL ?? "https://assay-dusky.vercel.app").replace(/\/$/, "");
   const f = opts.fetch ?? fetch;
   const maxChecks = opts.maxChecks ?? 5;
+  // A saved policy is read once and reused for five minutes, so an edit in the dashboard reaches running agents quickly without a fetch per payment.
+  let rules: { at: number; p: Promise<PolicyRules> } | null = null;
+  const loadRules = (id: string) => {
+    if (!rules || Date.now() - rules.at > 300_000) {
+      rules = { at: Date.now(), p: f(`${base}/api/v1/policy/${encodeURIComponent(id)}`).then(async (r) => {
+        if (!r.ok) throw new Error(`policy ${id}: HTTP ${r.status}`);
+        return ((await r.json()) as { rules: PolicyRules }).rules;
+      }) };
+    }
+    return rules.p;
+  };
   return client.onBeforePaymentCreation(async ({ paymentRequired, selectedRequirements }) => {
     const payTo = String(selectedRequirements.payTo);
     const resource = (paymentRequired as { resource?: { url?: string } }).resource?.url ?? null;
-    const d = decideGuard(await investigate(f, base, payTo, resource, maxChecks), policy);
+    const findings = await investigate(f, base, payTo, resource, maxChecks);
+    let d: GuardDecision;
+    if (opts.policy) {
+      try { d = decideWithRules(findings, await loadRules(opts.policy), amountUsd(selectedRequirements), policy.failOpen); }
+      catch (e) {
+        rules = null;
+        d = { payTo, resource, checked: findings.checked, action: policy.failOpen ? "allow" : "refuse", reason: `could not load policy ${opts.policy} (${(e as Error).message})` };
+      }
+    } else {
+      d = decideGuard(findings, policy);
+    }
     opts.onDecision?.(d);
     if (d.action === "refuse") return { abort: true as const, reason: `Assay guard: ${d.reason}` };
   });

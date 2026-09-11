@@ -28,7 +28,7 @@ export const IDENTITY_ABI = parseAbi([
 export interface PaymentProof { fromAddress: string; toAddress: string; chainId: string; txHash: string }
 
 export interface ReceiptInput {
-  /** The agent that was paid — for the demo, Assay itself. */
+  /** The agent that was paid. */
   agentId: bigint;
   /** 0–100. What the payer thought of the work. */
   value: number;
@@ -56,8 +56,8 @@ export function clients(privateKey: Hex) {
  * bars the agent's owner from reviewing itself — and the file goes to IPFS
  * because that is the only place the indexer will read it from.
  */
-export async function writeReceipt(input: ReceiptInput) {
-  const key = process.env.AGENT_EVM_PRIVATE_KEY as Hex | undefined;
+export async function writeReceipt(input: ReceiptInput, privateKey?: Hex) {
+  const key = privateKey ?? (process.env.AGENT_EVM_PRIVATE_KEY as Hex | undefined);
   if (!key) throw new Error("AGENT_EVM_PRIVATE_KEY is not set (the paying agent's Base Sepolia key).");
   const { account, pub, wallet } = clients(key);
   const [tag1, tag2] = input.tags ?? ["assay", "paid-check"];

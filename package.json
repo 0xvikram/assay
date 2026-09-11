@@ -36,6 +36,7 @@
     "@hiero-ledger/sdk": "^2.85.0",
     "@modelcontextprotocol/sdk": "^1.30.0",
     "@privy-io/node": "^0.34.0",
+    "@privy-io/react-auth": "^3.42.0",
     "@worldcoin/idkit": "^4.2.3",
     "@worldcoin/idkit-core": "^4.2.4",
     "@x402/core": "^2.25.0",

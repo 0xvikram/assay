@@ -4,12 +4,14 @@ import { useEffect, useRef, useState } from "react";
 type Entry =
   | { kind: "receipt"; seq: number; at: string; messageUrl: string; route: string; ref: string; verdict: string; payer: string | null; amount: string | null; asset: string | null; network: string; settlementTxId: string | null; settlementUrl: string | null }
   | { kind: "approval"; seq: number; at: string; messageUrl: string; mandateId: string; escalationId: string; newCap: string; credential: string }
+  | { kind: "escalation"; seq: number; at: string; messageUrl: string; mandateId: string; escalationId: string; ref: string; cap: string; why: string }
   | { kind: "settlement"; seq: number; at: string; messageUrl: string; ref: string; verdict: string; recipient: string; valueWei: string; network: string; allowed: boolean; txHash: string | null; txUrl: string | null; refusedBecause: string | null };
 
 const VERDICT: Record<string, string> = { VERIFIED: "var(--mint)", UNPROVEN: "var(--gold)", WASH_REPUTATION_DETECTED: "var(--coral)" };
-const RAIL: Record<string, string> = { "hedera:testnet": "Hedera", "eip155:5042002": "Arc", "eip155:84532": "Base Sepolia" };
+const RAIL: Record<string, string> = { "hedera:testnet": "Hedera", "eip155:5042002": "Arc", "eip155:84532": "Base Sepolia", apikey: "Monthly plan" };
 
 function amountLabel(e: Extract<Entry, { kind: "receipt" }>) {
+  if (e.network === "apikey") return e.amount ?? "";
   if (e.network.startsWith("hedera")) return `${(Number(e.amount) / 1e8).toFixed(2)} ℏ`;
   if (e.amount) return `${(Number(e.amount) / 1e6).toFixed(3)} USDC`;
   return "";
@@ -95,7 +97,7 @@ export default function Trail({ limit = 8, compact = false }: { limit?: number; 
                   <span style={{ color: VERDICT[e.verdict] ?? "var(--ink)" }}>{e.verdict || "—"}</span>
                   <span style={{ color: "var(--ink-3)" }}> · {e.ref || e.route}</span>
                 </span>
-                <span className="mono trail-sub">paid by {e.payer ?? "—"}{e.settlementTxId ? ` · ${e.settlementTxId}` : ""}</span>
+                <span className="mono trail-sub">{e.network === "apikey" ? `API key · account ${e.payer ?? "—"}` : `paid by ${e.payer ?? "—"}`}{e.settlementTxId ? ` · ${e.settlementTxId}` : ""}</span>
               </span>
               <span className="mono trail-rail">{RAIL[e.network] ?? e.network}</span>
               <span className="mono trail-amt">{amountLabel(e)}</span>
@@ -111,6 +113,15 @@ export default function Trail({ limit = 8, compact = false }: { limit?: number; 
               </span>
               <span className="mono trail-rail">Privy</span>
               <span className="mono trail-amt" style={e.allowed ? undefined : { color: "var(--ink-4)", textDecoration: "line-through" }}>{eth(e.valueWei)}</span>
+            </>
+          ) : e.kind === "escalation" ? (
+            <>
+              <span className="trail-main">
+                <span><span style={{ color: "var(--gold)" }}>APPROVAL REQUESTED</span><span style={{ color: "var(--ink-3)" }}> · {e.ref}</span></span>
+                <span className="trail-sub">{e.why} · escalation {e.escalationId}</span>
+              </span>
+              <span className="mono trail-rail">Policy</span>
+              <span className="mono trail-amt" style={{ color: "var(--gold)" }}>{e.cap}</span>
             </>
           ) : (
             <>

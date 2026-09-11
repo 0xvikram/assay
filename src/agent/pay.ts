@@ -6,6 +6,7 @@ import { decide, enforce, loadMandate, type Ledger } from "./mandate";
 import { writeReceipt } from "./receipt";
 import { settleWithCounterparty } from "../treasury/privy";
 import { submitMessage } from "../hcs";
+import { receiptForSettlement } from "../guard/receipts";
 
 /**
  * The reference paying agent. It does exactly one thing an agent about to pay
@@ -114,7 +115,10 @@ let proceed = decision.action === "proceed";
 if (decision.action === "step-up") {
   const mandateId = process.env.MANDATE_ID ?? "default";
   const escalationId = crypto.randomUUID().slice(0, 8);
-  const url = `${BASE}/escalate?mandate=${mandateId}&id=${escalationId}&cap=${intendedSpend}&why=${encodeURIComponent(`${ref} is ${report.assessment.verdict}; spend ${intendedSpend} exceeds ${mandate.requireStepUpAbove}`)}`;
+  const why = `${ref} is ${report.assessment.verdict}; spend ${intendedSpend} exceeds ${mandate.requireStepUpAbove}`;
+  const url = `${BASE}/escalate?mandate=${mandateId}&id=${escalationId}&cap=${intendedSpend}&why=${encodeURIComponent(why)}`;
+  // Onto the ledger, so the approvals inbox of whoever owns this policy shows it waiting.
+  await submitMessage({ type: "assay.escalation.v1", mandateId, escalationId, ref, cap: String(intendedSpend), why, ts: new Date().toISOString() });
   console.log(`\n  ${b("5a. a human must approve")}`);
   console.log(`     open on a phone:  ${url}`);
   console.log(`     ${dim(`polling ${BASE}/api/v1/mandate/${mandateId}/approvals for escalation ${escalationId}${waitForHuman ? "" : " (pass --wait to block)"}`)}`);
@@ -175,6 +179,15 @@ if (proceed) {
       ts: new Date().toISOString(),
     });
     console.log(`     ${dim(seq != null ? `recorded on HCS seq ${seq} — visible on /trail` : "not recorded on HCS (topic unconfigured)")}`);
+
+    // The loop's last step: the payment earns the seller a review that carries
+    // its own proof, found and written from the settlement alone.
+    if (out.allowed && out.hash) {
+      console.log(`\n  ${b("7. the receipt the payment earned")}`);
+      const r = await receiptForSettlement({ txHash: out.hash as `0x${string}`, base: BASE, text: `Paid ${settleWei} wei to ${ref} after an Assay check returned ${report.assessment.verdict}.` })
+        .catch((e: Error) => ({ status: "skipped" as const, reason: e.message }));
+      console.log(r.status === "written" ? `     review of ${r.ref} written — ${r.explorer}\n     ${dim(`proof: ${r.proof.from} paid ${r.proof.to} in ${r.proof.txHash}`)}` : `     ${dim(`no receipt: ${r.reason}`)}`);
+    }
   }
 }
 

@@ -45,6 +45,7 @@ export default function Console() {
   const [report, setReport] = useState<Report | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [took, setTook] = useState<number | null>(null);
+  const [shown, setShown] = useState<string | null>(null);
   // Only the latest request may write state; a slow earlier read must not overwrite a newer one.
   const seq = useRef(0);
   const started = useRef(false);
@@ -72,7 +73,7 @@ export default function Console() {
         rep = (await f.json()) as Report;
       }
       if (id !== seq.current) return;
-      setPreview(pv); setAccepts(acc); setReport(rep); setTook(performance.now() - t0);
+      setPreview(pv); setAccepts(acc); setReport(rep); setTook(performance.now() - t0); setShown(target.trim());
     } catch (e) {
       if (id === seq.current) setError((e as Error).message);
     } finally {
@@ -81,7 +82,8 @@ export default function Console() {
   }, []);
 
   useEffect(() => {
-    if (!started.current) { started.current = true; void run(FIRST); }
+    // A link can name the agent to open with (/?ref=base:25975), as the agent pages do.
+    if (!started.current) { started.current = true; const q = new URLSearchParams(window.location.search).get("ref"); void run(q && /^[a-z0-9-]+:\d+$/i.test(q) ? q : FIRST); }
     const onRun = (e: Event) => { const r = (e as CustomEvent<string>).detail; if (r) void run(r); };
     window.addEventListener("assay:run", onRun);
     return () => window.removeEventListener("assay:run", onRun);
@@ -136,6 +138,7 @@ export default function Console() {
             <div className="mono" style={{ fontSize: 11, lineHeight: 1.6, color: "var(--ink-4)", overflowWrap: "anywhere" }}>
               deployment {preview.provenance.deployment} · block {preview.provenance.block}{took != null ? ` · read in ${(took / 1000).toFixed(1)}s` : ""}
             </div>
+            {shown && <a href={`/agent/${shown.split(":")[0]}/${shown.split(":")[1]}`} className="mono" style={{ alignSelf: "flex-start", fontSize: 12, fontWeight: 500, color: "var(--cobalt)" }}>public page and badge →</a>}
           </div>
         )}
 

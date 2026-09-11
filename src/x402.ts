@@ -1,4 +1,4 @@
-import { NextResponse, type NextRequest } from "next/server";
+import { NextResponse, after, type NextRequest } from "next/server";
 import { HTTPFacilitatorClient, x402ResourceServer, type FacilitatorClient, type RouteConfig, type RoutesConfig } from "@x402/core/server";
 import { ExactHederaScheme } from "@x402/hedera/exact/server";
 import { BatchFacilitatorClient, GatewayEvmScheme } from "@circle-fin/x402-batching/server";
@@ -6,6 +6,7 @@ import { ExactEvmScheme } from "@x402/evm/exact/server";
 import { withX402 } from "@x402/next";
 import { privateKeyToAccount } from "viem/accounts";
 import { submitReceipt } from "./hcs";
+import { accountForKey } from "./saas/accounts";
 
 export const FACILITATOR_URL = process.env.X402_FACILITATOR_URL ?? "https://api.testnet.blocky402.com";
 export const NETWORK = "hedera:testnet";
@@ -184,7 +185,46 @@ export function paid(pattern: string, tier: Tier, handler: Handler): Handler {
       serviceName: "Assay",
     },
   };
-  return withX402(handler, routes, resourceServer());
+  const gated = withX402(handler, routes, resourceServer());
+  return async (req: NextRequest) => {
+    const key = /^Bearer\s+(ak_\S+)$/i.exec(req.headers.get("authorization") ?? "")?.[1];
+    return key ? keyed(req, key, tier, handler) : gated(req);
+  };
+}
+
+/**
+ * The monthly-plan door to the same handler. Agents with a wallet pay each
+ * call over x402; a company presents an API key and is billed for the month.
+ * Every keyed call is metered on the ledger exactly like a paid one — same
+ * receipt, network "apikey" — so the bill is something anyone can recount.
+ */
+async function keyed(req: NextRequest, key: string, tier: Tier, handler: Handler): Promise<NextResponse> {
+  const account = await accountForKey(key).catch(() => null);
+  if (!account) {
+    return NextResponse.json({ error: "invalid_api_key", detail: "Unknown or revoked API key. A new key takes a few seconds to become active." }, { status: 401 });
+  }
+  const res = await handler(req);
+  if (res.status === 200) {
+    let out: { assessment?: { verdict?: string }; provenance?: { deployment?: string; block?: number } } = {};
+    try { out = await res.clone().json(); } catch { /* not every tier returns a report */ }
+    const parts = req.nextUrl.pathname.split("/").slice(4);
+    const ref = parts.length ? parts.join(":") : req.nextUrl.search.slice(1);
+    after(() => submitReceipt({
+      type: "assay.receipt.v1",
+      route: tier,
+      ref,
+      payer: account,
+      amount: TIERS[tier].usd,
+      asset: "USD",
+      network: "apikey",
+      settlementTxId: null,
+      verdict: out.assessment?.verdict ?? "",
+      deployment: out.provenance?.deployment ?? "",
+      block: out.provenance?.block ?? 0,
+      ts: new Date().toISOString(),
+    }).then(() => undefined));
+  }
+  return res;
 }
 
 let supportedAt = 0;

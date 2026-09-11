@@ -1,5 +1,5 @@
 import { readFileSync } from "node:fs";
-import { fileURLToPath } from "node:url";
+import { resolve } from "node:path";
 
 export interface ChainEntry {
   key: string;
@@ -10,7 +10,10 @@ export interface ChainEntry {
   explorer: string;
 }
 
-const file = fileURLToPath(new URL("../../../registry/chains.json", import.meta.url));
+// From the working directory, as the lending registry does. new URL(…, import.meta.url)
+// broke once the engine ran inside rendered pages: the bundler turns that pattern
+// into an asset reference with its own URL class, which fileURLToPath rejects.
+const file = resolve(process.cwd(), "registry/chains.json");
 const raw = JSON.parse(readFileSync(file, "utf8")) as { chains: ChainEntry[] };
 
 export const CHAINS: ChainEntry[] = raw.chains;

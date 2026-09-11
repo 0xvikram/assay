@@ -11,7 +11,7 @@ export default function Footer() {
           </div>
           <div className="footer-col">
             <div className="eyebrow">Product</div>
-            <a href="/#console">Console</a><a href="/trail">Ledger</a><a href="/escalate">Step-up</a><a href="/architecture">Architecture</a><a href="/api/openapi">OpenAPI 3.1</a><a href="/api/mcp">MCP endpoint</a>
+            <a href="/#console">Console</a><a href="/agent">Look up an agent</a><a href="/dashboard">Dashboard</a><a href="/trail">Ledger</a><a href="/escalate">Step-up</a><a href="/architecture">Architecture</a><a href="/api/openapi">OpenAPI 3.1</a><a href="/api/mcp">MCP endpoint</a>
           </div>
           <div className="footer-col">
             <div className="eyebrow">On-chain</div>

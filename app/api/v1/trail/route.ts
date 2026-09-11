@@ -31,8 +31,12 @@ export async function GET(req: NextRequest) {
           const txUrl = x.txHash ? `https://sepolia.basescan.org/tx/${x.txHash}` : null;
           return { ...base, kind: "settlement" as const, ref: x.ref, verdict: x.verdict, recipient: x.recipient, valueWei: x.valueWei, network: x.network, allowed: x.allowed, txHash: x.txHash, txUrl, refusedBecause: x.refusedBecause };
         }
-        return { ...base, kind: "approval" as const, mandateId: x.mandateId, escalationId: x.escalationId, newCap: x.newCap, credential: x.credential };
-      });
+        if (x.type === "assay.approval.v1") return { ...base, kind: "approval" as const, mandateId: x.mandateId, escalationId: x.escalationId, newCap: x.newCap, credential: x.credential };
+        if (x.type === "assay.escalation.v1") return { ...base, kind: "escalation" as const, mandateId: x.mandateId, escalationId: x.escalationId, ref: x.ref, cap: x.cap, why: x.why };
+        // Keys, policies and watchlists live on the same topic but aren't payments; the ledger shows money and decisions.
+        return null;
+      })
+      .filter((e) => e !== null);
     return NextResponse.json({ topic, topicUrl: `https://hashscan.io/testnet/topic/${topic}`, entries });
   } catch (err) {
     return NextResponse.json({ error: (err as Error).message }, { status: 502 });

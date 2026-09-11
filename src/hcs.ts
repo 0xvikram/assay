@@ -1,3 +1,4 @@
+import type { PolicyRules } from "./saas/policy";
 import {
   AccountId, Client, PrivateKey, TopicCreateTransaction, TopicMessageSubmitTransaction, TopicId,
 } from "@hiero-ledger/sdk";
@@ -78,7 +79,20 @@ export interface Settlement {
   ts: string;
 }
 
-export type TopicMessage = Receipt | Approval | Settlement;
+/**
+ * The account layer. Nothing secret is ever written here: an account is an
+ * HMAC of the login, a key is stored only as its hash, and a webhook URL —
+ * which often embeds a token — only encrypted.
+ */
+export interface ApiKeyIssued { type: "assay.apikey.v1"; account: string; keyId: string; keyHash: string; label: string; ts: string }
+export interface ApiKeyRevoked { type: "assay.apikey.revoked.v1"; account: string; keyId: string; ts: string }
+export interface PolicySet { type: "assay.policy.v1"; account: string; policyId: string; rules: PolicyRules; ts: string }
+/** An agent asked for more than its policy allows; a person decides. The approval is an Approval with the same escalationId. */
+export interface EscalationRequested { type: "assay.escalation.v1"; mandateId: string; escalationId: string; ref: string; cap: string; why: string; ts: string }
+export interface WatchSet { type: "assay.watch.v1"; account: string; watchId: string; ref: string; baseline: string; hook: string | null; active: boolean; ts: string }
+export interface AlertSent { type: "assay.alert.v1"; account: string; watchId: string; ref: string; from: string; to: string; delivered: boolean | null; ts: string }
+
+export type TopicMessage = Receipt | Approval | Settlement | ApiKeyIssued | ApiKeyRevoked | PolicySet | EscalationRequested | WatchSet | AlertSent;
 
 /** Every message on the topic goes through here; the type field says what it is. */
 export async function submitMessage(msg: TopicMessage): Promise<number | null> {
@@ -126,6 +140,39 @@ export async function readMessages(limit = 100): Promise<{ seq: number; consensu
     try { message = JSON.parse(Buffer.from(m.message, "base64").toString("utf8")) as TopicMessage; } catch { /* foreign message on our topic */ }
     return { seq: m.sequence_number, consensusAt: m.consensus_timestamp, message };
   });
+}
+
+export interface TopicRow { seq: number; consensusAt: string; message: TopicMessage | null }
+
+const parse = (m: { sequence_number: number; consensus_timestamp: string; message: string }): TopicRow => {
+  let message: TopicMessage | null = null;
+  try { message = JSON.parse(Buffer.from(m.message, "base64").toString("utf8")) as TopicMessage; } catch { /* foreign message on our topic */ }
+  return { seq: m.sequence_number, consensusAt: m.consensus_timestamp, message };
+};
+
+let all: { at: number; rows: TopicRow[] } | null = null;
+
+/**
+ * The whole topic, oldest first. The account layer needs every key and policy
+ * ever written, not the latest hundred messages, so this walks the mirror
+ * node's pages — once, then only what is new since the last read.
+ */
+export async function readAll(maxAgeMs = 4_000): Promise<TopicRow[]> {
+  const topic = process.env.HCS_TOPIC_ID;
+  if (!topic) return [];
+  if (all && Date.now() - all.at < maxAgeMs) return all.rows;
+  const rows = all ? [...all.rows] : [];
+  const last = rows.at(-1)?.seq ?? 0;
+  let next: string | null = `/api/v1/topics/${topic}/messages?limit=100&order=asc${last ? `&sequencenumber=gt:${last}` : ""}`;
+  for (let page = 0; next && page < 200; page++) {
+    const res: Response = await fetch(`${MIRROR}${next}`, { headers: { "User-Agent": "assay/0.1 (+hcs)" }, signal: AbortSignal.timeout(15_000) });
+    if (!res.ok) throw new Error(`mirror node HTTP ${res.status}`);
+    const j = (await res.json()) as { messages: { sequence_number: number; consensus_timestamp: string; message: string }[]; links?: { next?: string | null } };
+    rows.push(...j.messages.map(parse));
+    next = j.messages.length ? j.links?.next ?? null : null;
+  }
+  all = { at: Date.now(), rows };
+  return rows;
 }
 
 export async function readApprovals(mandateId?: string, limit = 100): Promise<(Approval & { seq: number; consensusAt: string })[]> {

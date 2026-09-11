@@ -127,11 +127,16 @@ tag; it cannot revoke — only the writer can. Base Sepolia only for now. Eviden
 | `GET /api/v1/lending/market?asset=&sources=a,b` | paid | reconcile one market across two Messari subgraphs, or refuse |
 | `GET /api/v1/lending/sources` | free | the lending registry with schema and methodology versions |
 | `GET /api/v1/lookup?address=&url=` | free | which registered agents a payment would go to — what the guard asks first |
+| `GET /agent?q=` · `GET /agent/{chain}/{agentId}` | free | look up an agent by `chain:id`, wallet or URL; its public page with the path to VERIFIED |
+| `GET /api/v1/badge/{chain}/{agentId}` | free | an embeddable SVG badge with the current verdict |
+| `GET /api/v1/policy/{policyId}` | free | a company's saved payment policy, read by the guard |
+| `GET /api/v1/trail/export` | free | the whole ledger as CSV |
+| `/dashboard` · `/api/v1/account/*` | sign-in | API keys, policy, approvals, watchlist, usage — Privy email login |
 | `GET /api/v1/trail` · `GET /api/v1/mandate/{id}/approvals` | free | the ledger, from the mirror node |
 | `POST /api/mcp` | mixed | Streamable HTTP MCP; `assay_agent` paid, `assay_preview` free |
 | `GET /api/openapi` · `/api/v1/chains` · `/api/healthz` | free | |
 
-Every paid route's 402 offers **three rails**: `hedera:testnet` (Blocky402), `eip155:5042002` Arc (Circle Gateway), `eip155:84532` Base Sepolia (x402.org). Free routes allow 10–60 requests/min per IP depending on the route; the paid routes are their own limit.
+Every paid route also accepts `Authorization: Bearer ak_…` — an API key from the dashboard, metered on the ledger and billed monthly. Every paid route's 402 offers **three rails**: `hedera:testnet` (Blocky402), `eip155:5042002` Arc (Circle Gateway), `eip155:84532` Base Sepolia (x402.org). Free routes allow 10–60 requests/min per IP depending on the route; the paid routes are their own limit.
 
 ## Adding a source
 
@@ -154,6 +159,34 @@ Two subgraphs agreeing on a number means nothing unless they computed it the sam
 18 registered sources across 8 networks (Ethereum, Base, Arbitrum, Polygon, Gnosis, Avalanche, BNB Chain, Optimism), 15 servable. Every one of the new rows was probed for health, network and a USDC market before it was added.
 
 `npm run lending:demo` prints all of it live.
+
+## Assay as a service
+
+The whole loop runs as a product, not only as a demo agent. See the flow at
+`docs/evidence/saas-loop.md`.
+
+1. **Check.** A buyer's agent asks before paying — over x402, with an API key, over MCP, or
+   automatically inside its payment client with `withAssayGuard(client, { policy: "pol_…" })`.
+2. **Decide.** The company's policy, edited in the dashboard, turns the verdict into pay,
+   pay-up-to-a-cap, refuse or ask a person. The guard reads it by id; the Privy wallet enforces
+   the spending limit outside the agent.
+3. **Approve.** Only a payment the policy won't allow reaches a person: the paying agent writes an
+   escalation to the ledger (`MANDATE_ID=pol_…`), it appears in the dashboard's approvals inbox, and
+   a World ID Selfie Check approves it.
+4. **Pay.** The payment settles on Base, Arc or Hedera.
+5. **Receipt.** `withAssayReceipts(paidFetch)` — or the reference agent's step 7 — reads who paid
+   whom from the settlement itself, finds the agent that was paid (by its wallet first; a URL only
+   breaks ties) and writes the buyer's ERC-8004 review with that transaction as proof of payment.
+   Base Sepolia only for now.
+6. **Reputation.** The seller's public page at `/agent/{chain}/{id}` shows the path to VERIFIED, and
+   its badge follows the verdict. A watchlist re-checks agents daily and posts to a webhook when a
+   verdict moves.
+
+There is still no database. Accounts, keys, policies, escalations and watchlists are messages on the
+same HCS topic as the payments, written so that nothing on the public ledger is secret: an account is
+an HMAC of the Privy login, a key is stored only as its SHA-256, and a webhook URL only sealed with
+AES-256-GCM under `ASSAY_DATA_KEY`. What isn't built: invoicing (usage is metered; nothing charges a
+card yet), receipts on chains other than Base Sepolia, and mainnet.
 
 ## Design
 
